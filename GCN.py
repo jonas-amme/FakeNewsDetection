@@ -16,6 +16,7 @@ from torch_geometric.nn import GCNConv, global_mean_pool
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
 
 from LoadData import LoadData
+from preprocess import normalizeNodeFeatures
 
 
 # Create the model 
@@ -23,8 +24,8 @@ class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        self.num_features = 9
-        self.nhid = 64
+        self.num_features = 4
+        self.nhid = 128
 
         self.conv1 = GCNConv(self.num_features, self.nhid * 2)
         self.conv2 = GCNConv(self.nhid * 2, self.nhid * 2)
@@ -63,12 +64,11 @@ def eval(log):
 
 def test(loader):
     model.eval()
-
     loss_test = 0.0
     out_log = []
     with torch.no_grad():
         for data in loader:
-            data = data
+            # data = data.to(device)
             out = model(data.x, data.edge_index, data.batch)
             y = data.y
             out_log.append([F.softmax(out, dim=1), y])
@@ -79,23 +79,26 @@ def test(loader):
 # Load Data
 DATA_PATH = "../00_Data/cascades/cascades"
 dataloader = LoadData(DATA_PATH)
-trainset = dataloader.load_train_data()
-testset = dataloader.load_test_data()
+graph_data = dataloader.graph_data
+real_data = dataloader.real_data
+fake_data = dataloader.fake_data
 
-# view some data
-for step, data in enumerate(trainset):
-    if step == 4:
-        break
-    print(f'Step {step + 1}:')
-    print('=======')
-    print(f'Number of graphs in the current batch: {data.num_graphs}')
-    print(data)
-    print()
+print(f'graph data: no. graphs {len(graph_data)}')
+print(f'real data : no. graphs {len(real_data)}')
+print(f'fake data : no. graphs {len(fake_data)}')
+
+# preprocess graph data
+graph_data = normalizeNodeFeatures(graph_data)
+
+# create train and test set
+trainset, testset = random_split(graph_data, [1000, 1000])
+trainloader = DataLoader(trainset, batch_size=1, shuffle=True)
+testloader = DataLoader(testset, batch_size=1, shuffle=True)
+
 
 # initialize model
 model = Net()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-criterion = torch.nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.01)
 
 # model training
 epochs = 10
