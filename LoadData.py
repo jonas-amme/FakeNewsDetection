@@ -7,39 +7,42 @@ import os
 import numpy as np
 import torch
 from torch_geometric.data import DataLoader
+from torch.utils.data import random_split
 
 
 # create data loader class object
 class LoadData:
     def __init__(self, data_folder):
         self.data_folder = data_folder
-        self.train_size = 500  # NB: change this later on
-        self.trainset, self.testset = [], []
+        # self.train_size = 500  # NB: change this later on
+        self.real_data, self.fake_data, self.graph_data = [], [], []
         self.files = os.listdir(self.data_folder)
         self.data_objects = self._get_data_objects()
 
     def _get_data_objects(self):
-        i=0
+        fake = 0
+        real = 0
         for file in self.files:
             filename = os.path.join(self.data_folder, file)
-            data_obj = torch.load(filename) 
+            data_obj = torch.load(filename)
+            if data_obj.y == 1:
+                if real == 1000:
+                    continue
+                self.real_data.append(data_obj)
+                real += 1
+            else:
+                if fake == 1000:
+                    continue
+                self.fake_data.append(data_obj)
+                fake += 1
+            self.graph_data.append(data_obj)
+        return self.real_data, self.fake_data, self.graph_data
 
-            # convert tensor types; another way??
-            data_obj.x = data_obj.x.to(torch.float)
-            data_obj.y = data_obj.y.to(torch.long)
-            
-            # limit train and test set to n=500
-            if i < self.train_size:
-                self.trainset.append(data_obj)
-            elif i == 1000: # remove this later on 
-                break
-            elif i >= self.train_size:
-                self.testset.append(data_obj)
-            i += 1
-        return self.trainset, self.testset
-
-    def load_train_data(self, batch_size=1):
-        return DataLoader(self.trainset, batch_size=batch_size)
-
-    def load_test_data(self, batch_size=1):
-        return DataLoader(self.testset, batch_size=batch_size)
+    # def load_graph_data(self, batch_size=1):
+    #     return DataLoader(self.graph_data, batch_size=batch_size, shuffle=True)
+    #
+    # def load_real_data(self, batch_size=1):
+    #     return DataLoader(self.real_data, batch_size=batch_size)
+    #
+    # def load_fake_data(self, batch_size=1):
+    #     return DataLoader(self.fake_data, batch_size=batch_size)
