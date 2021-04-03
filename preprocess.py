@@ -5,15 +5,6 @@ import torch
 from torch_geometric.data import Data, DataLoader
 from LoadData import LoadData
 
-# # Load Data
-# DATA_PATH = "../00_Data/cascades/cascades"
-# dataloader = LoadData(DATA_PATH)
-# trainset = dataloader.load_train_data()
-# testset = dataloader.load_test_data()
-#
-# print(f'Trainset: no. graphs {len(trainset)}')
-# print(f'Testset : no. graphs {len(testset)}')
-
 
 # list of features
 # 0 tweet created at           # currently removed but will need for time between tweets as edge features
@@ -43,8 +34,8 @@ def addAgeUntilTweet(cascade):
         date_created = str(features[-1])  # extract user creation date
         diff = datetime.datetime.strptime(date_tweet, datetimeFormat) \
                - datetime.datetime.strptime(date_created, datetimeFormat)  # compute time difference
-        diff_sec = np.array(diff.seconds, ndmin=1)
-        features = np.delete(features, [0, -1])  # remove tweet and user creation date   !!!! change this !!!!!
+        diff_sec = np.array(diff.days, ndmin=1)
+        features = np.delete(features, [0,1,2,3,4,-1])  # remove tweet and user creation date
         x.append(np.concatenate((features, diff_sec)))  # concat and append to new feature list
 
     x = torch.tensor(x, dtype=torch.float)  # convert new feature list to torch tensor
@@ -70,14 +61,14 @@ def normalizeCascade(cascade, MeansSigmas):
         normalized = list()
 
         # normalize each feature with its corresponding mean and sigma
-        normalized.append(normalize(node[0], MeansSigmas['TextEmb'][0], MeansSigmas['TextEmb'][1]))
-        normalized.append(normalize(node[1], MeansSigmas['HashEmb'][0], MeansSigmas['HashEmb'][1]))
-        normalized.append(normalize(node[2], MeansSigmas['NameEmb'][0], MeansSigmas['NameEmb'][1]))
-        normalized.append(normalize(node[3], MeansSigmas['DescEmb'][0], MeansSigmas['DescEmb'][1]))
-        normalized.append(normalize(node[4], MeansSigmas['Followers'][0], MeansSigmas['Followers'][1]))
-        normalized.append(normalize(node[5], MeansSigmas['Following'][0], MeansSigmas['Following'][1]))
-        normalized.append(normalize(node[6], MeansSigmas['Listed'][0], MeansSigmas['Listed'][1]))
-        normalized.append(normalize(node[7], MeansSigmas['Age'][0], MeansSigmas['Age'][1]))
+        # normalized.append(normalize(node[0], MeansSigmas['TextEmb'][0], MeansSigmas['TextEmb'][1]))
+        # normalized.append(normalize(node[1], MeansSigmas['HashEmb'][0], MeansSigmas['HashEmb'][1]))
+        # normalized.append(normalize(node[2], MeansSigmas['NameEmb'][0], MeansSigmas['NameEmb'][1]))
+        # normalized.append(normalize(node[3], MeansSigmas['DescEmb'][0], MeansSigmas['DescEmb'][1]))
+        normalized.append(normalize(node[0], MeansSigmas['Followers'][0], MeansSigmas['Followers'][1]))
+        normalized.append(normalize(node[1], MeansSigmas['Following'][0], MeansSigmas['Following'][1]))
+        normalized.append(normalize(node[2], MeansSigmas['Listed'][0], MeansSigmas['Listed'][1]))
+        normalized.append(normalize(node[3], MeansSigmas['Age'][0], MeansSigmas['Age'][1]))
 
         # add normalized vector to new feature representation
         x.append(normalized)
@@ -90,10 +81,10 @@ def normalizeCascade(cascade, MeansSigmas):
 def normalizeNodeFeatures(data):
 
     # initialize total feature list
-    TextEmb = list()
-    HashEmb = list()
-    NameEmb = list()
-    DescEmb = list()
+    # TextEmb = list()
+    # HashEmb = list()
+    # NameEmb = list()
+    # DescEmb = list()
     Followers = list()
     Following = list()
     Listed = list()
@@ -106,21 +97,21 @@ def normalizeNodeFeatures(data):
 
     # loop over new graph data
     for cascade in graph_dataset:
-        TextEmb.extend([features[0] for features in cascade.x])  # extract text embedding
-        HashEmb.extend([features[1] for features in cascade.x])  # extract hashtag embedding
-        NameEmb.extend([features[2] for features in cascade.x])  # extract name embedding
-        DescEmb.extend([features[3] for features in cascade.x])  # extract description embedding
-        Followers.extend([features[4] for features in cascade.x])  # extract follower count
-        Following.extend([features[5] for features in cascade.x])  # extract following count
-        Listed.extend([features[6] for features in cascade.x])  # extract listed count
-        Age.extend([features[7] for features in cascade.x])  # extract age until tweet
+        # TextEmb.extend([features[0] for features in cascade.x])  # extract text embedding
+        # HashEmb.extend([features[1] for features in cascade.x])  # extract hashtag embedding
+        # NameEmb.extend([features[2] for features in cascade.x])  # extract name embedding
+        # DescEmb.extend([features[3] for features in cascade.x])  # extract description embedding
+        Followers.extend([features[0] for features in cascade.x])  # extract follower count
+        Following.extend([features[1] for features in cascade.x])  # extract following count
+        Listed.extend([features[2] for features in cascade.x])  # extract listed count
+        Age.extend([features[3] for features in cascade.x])  # extract age until tweet
 
     # calculate means and standard deviations
     MeansSigmas = dict()
-    MeansSigmas['TextEmb'] = (np.mean(TextEmb), np.std(TextEmb))
-    MeansSigmas['HashEmb'] = (np.mean(HashEmb), np.std(HashEmb))
-    MeansSigmas['NameEmb'] = (np.mean(NameEmb), np.std(NameEmb))
-    MeansSigmas['DescEmb'] = (np.mean(DescEmb), np.std(DescEmb))
+    # MeansSigmas['TextEmb'] = (np.mean(TextEmb), np.std(TextEmb))
+    # MeansSigmas['HashEmb'] = (np.mean(HashEmb), np.std(HashEmb))
+    # MeansSigmas['NameEmb'] = (np.mean(NameEmb), np.std(NameEmb))
+    # MeansSigmas['DescEmb'] = (np.mean(DescEmb), np.std(DescEmb))
     MeansSigmas['Followers'] = (np.mean(Followers), np.std(Followers))
     MeansSigmas['Following'] = (np.mean(Following), np.std(Following))
     MeansSigmas['Listed'] = (np.mean(Listed), np.std(Listed))
@@ -131,9 +122,4 @@ def normalizeNodeFeatures(data):
     for cascade in graph_dataset:
         final_graph_dataset.append(normalizeCascade(cascade, MeansSigmas))
 
-    return DataLoader(final_graph_dataset, batch_size=1)
-
-
-
-
-
+    return final_graph_dataset
