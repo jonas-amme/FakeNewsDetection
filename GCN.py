@@ -13,6 +13,8 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Linear
 from torch_geometric.nn import GCNConv, global_mean_pool
+from torch.utils.data import random_split
+from torch_geometric.data import DataLoader
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
 
 from LoadData import LoadData
@@ -95,7 +97,6 @@ trainset, testset = random_split(graph_data, [1000, 1000])
 trainloader = DataLoader(trainset, batch_size=1, shuffle=True)
 testloader = DataLoader(testset, batch_size=1, shuffle=True)
 
-
 # initialize model
 model = Net()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.01)
@@ -108,7 +109,7 @@ model.train()
 for epoch in tqdm(range(epochs)):
     loss_train = 0.0
     correct = 0
-    for i, data in enumerate(trainset):
+    for i, data in enumerate(trainloader):
         optimizer.zero_grad()
         data = data
         out = model(data.x, data.edge_index, data.batch)
@@ -119,7 +120,7 @@ for epoch in tqdm(range(epochs)):
         loss_train += loss.item()
         out_log.append([F.softmax(out, dim=1), y])
     acc_train, _, _, recall_train = eval(out_log)
-    [acc_val, _, _, recall_val], loss_val = test(testset)
+    [acc_val, _, _, recall_val], loss_val = test(testloader)
     print(f'loss_train: {loss_train:.4f}, acc_train: {acc_train:.4f},'
           f' recall_train: {recall_train:.4f}, loss_val: {loss_val:.4f},'
           f' acc_val: {acc_val:.4f}, recall_val: {recall_val:.4f}')
