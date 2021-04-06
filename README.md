@@ -14,4 +14,4 @@ pip install torch-geometric
 where ```${CUDA}``` and ```${TORCH}``` should be replaced by your specific CUDA version (cpu, cu92, cu101, cu102, cu110, cu111) and PyTorch version (1.4.0, 1.5.0, 1.6.0, 1.7.0, 1.8.0),
 
 To create the word embeddings it is required to create a subdir in ``CreateData`` called ``resources``, in this folder you need to place the ``glove.twitter.27B.200d.txt`` file.
-You can download the file here: http://nlp.stanford.edu/data/glove.twitter.27B.zip
+You can download the file here: https://ndownloader.figshare.com/files/21119193 (original link seems to be broken: https://nlp.stanford.edu/projects/glove/)
