@@ -184,8 +184,8 @@ if __name__ == "__main__":
     # When Debug=True GloVe always returns 0 :)
     glove = GloVe(debug=False)
     # TODO: this should be changed to where you have the data, if you run it in a liacs DS machine you can use
-    # root = os.path.join("data", "s1805819", "fakenewsnet_dataset", "politifact")
-    root = os.path.join("D:", "Onderzoek", "FakeNews", "fakenewsnet_dataset", "politifact")
+    root = os.path.join("data", "s1805819", "fakenewsnet_dataset", "politifact")
+    # root = os.path.join("D:", "Onderzoek", "FakeNews", "fakenewsnet_dataset", "politifact")
 
     for is_true in [False, True]:
         label = "real" if is_true else "fake"
