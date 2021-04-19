@@ -20,7 +20,7 @@ parser.add_argument('--dataset', type=str, default='/data/s1805819/fakenewsnet_d
 parser.add_argument('--glove', type=str,  default='/data/s2583550/FakeNewsDetection/CreateData/resources/glove.twitter.27B.200d.txt',
                     help='enter your GloVe data path')
 
-parser.add_argument('--target_folder', type=str, default='/data/s1805819/fakenewsnet_dataset/',
+parser.add_argument('--target_folder', type=str, default='/data/s2583550/FakeNewsDetection',
                     help='enter your target data path')
 
 args = parser.parse_args()
@@ -215,6 +215,7 @@ if __name__ == "__main__":
                 if cascade is not None:
                     # print(f"\t\t{cascade[0]}")
                     filename = os.path.join(
+                        # args.target_folder = target folder of news cascades, to be entered in the beginning
                         args.target_folder, "cascades", f'{news_id}-{cascade[1].split(".")[0]}.pt'
                     )
                     torch.save(cascade[0], filename)
