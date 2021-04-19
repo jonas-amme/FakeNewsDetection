@@ -13,18 +13,16 @@ from torch_geometric.data import Data
 
 # initialize arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset',
-                    type=str,
-                    default='/data/s1805819/fakenewsnet_dataset/politifact',
+
+parser.add_argument('--dataset', type=str, default='/data/s1805819/fakenewsnet_dataset/politifact',
                     help='enter your Twitter data path')
-parser.add_argument('--glove',
-                    type=str,
-                    default='/data/s2583550/FakeNewsDetection/CreateData/resources/glove.twitter.27B.200d.txt',
+
+parser.add_argument('--glove', type=str,  default='/data/s2583550/FakeNewsDetection/CreateData/resources/glove.twitter.27B.200d.txt',
                     help='enter your GloVe data path')
-parser.add_argument('--target_folder',
-                    type=str,
-                    default='/data/s1805819/fakenewsnet_dataset/',
+
+parser.add_argument('--target_folder', type=str, default='/data/s1805819/fakenewsnet_dataset/',
                     help='enter your target data path')
+
 args = parser.parse_args()
 print(args)
 
