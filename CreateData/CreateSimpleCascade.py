@@ -187,7 +187,10 @@ class CreateCascade:
             x=x_tensor, edge_index=edge_index_tensor.t().contiguous(), y=y_tensor
         )
 
-        print(data)
+        # print subset of data
+        if self.i % 10 == 0:
+            print(data)
+
         # finish iteration
         self.i += 1
         return data, self.cascade_ids[self.i - 1]
@@ -195,6 +198,7 @@ class CreateCascade:
 
 if __name__ == "__main__":
     print(f"started the creation of novel cascades")
+
 
     def _get_news_ids(data_folder):
         folders = os.listdir(data_folder)
