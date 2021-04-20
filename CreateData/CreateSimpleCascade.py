@@ -189,7 +189,7 @@ class CreateCascade:
 
         # print subset of data
         if self.i % 10 == 0:
-            print(data)
+            print(f'{self.i}: {data}')
 
         # finish iteration
         self.i += 1
