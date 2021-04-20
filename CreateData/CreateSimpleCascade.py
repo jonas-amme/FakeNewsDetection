@@ -187,10 +187,7 @@ class CreateCascade:
             x=x_tensor, edge_index=edge_index_tensor.t().contiguous(), y=y_tensor
         )
 
-        # print subset of data
-        if self.i % 10 == 0:
-            print(f'{self.i}: {data}')
-
+        # print(data)
         # finish iteration
         self.i += 1
         return data, self.cascade_ids[self.i - 1]
