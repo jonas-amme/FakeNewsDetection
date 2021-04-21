@@ -66,6 +66,10 @@ print('Edge features: ', example.edge_attr)
 print('Label: ', example.y)
 print()
 
+# check some node features of raw cascades
+for i in range(5):
+    print(graph_data[i].x)
+
 # preprocess graph data
 graph_data = normalizeFeatures(graph_data)
 
