@@ -202,7 +202,7 @@ if __name__ == "__main__":
         return folders
 
     # When Debug=True GloVe always returns 0 :)
-    glove = GloVe(debug=False)
+    glove = GloVe(debug=True)
     # args.dataset = data path of twitter data, to be entered in the beginning
     root = args.dataset
     # root = os.path.join("D:", "Onderzoek", "FakeNews", "fakenewsnet_dataset", "politifact")
