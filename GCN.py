@@ -56,8 +56,15 @@ fake_data = dataloader.fake_data
 print(f'graph data: no. graphs {len(graph_data)}')
 print(f'real data : no. graphs {len(real_data)}')
 print(f'fake data : no. graphs {len(fake_data)}')
+
 print()
-print(f'example graph: {graph_data[0]}')
+print('====== Example of raw cascade ======')
+example = graph_dataset[0]
+print('Cascade object: ', example)
+print('Feature matrix: ', example.x)
+print('Edge features: ', example.edge_attr)
+print('Label: ', example.y)
+print()
 
 # preprocess graph data
 graph_data = normalizeFeatures(graph_data)
