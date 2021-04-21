@@ -59,7 +59,7 @@ print(f'fake data : no. graphs {len(fake_data)}')
 
 print()
 print('====== Example of raw cascade ======')
-example = graph_dataset[0]
+example = graph_data[0]
 print('Cascade object: ', example)
 print('Feature matrix: ', example.x)
 print('Edge features: ', example.edge_attr)
