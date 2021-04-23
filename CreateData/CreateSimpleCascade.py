@@ -46,8 +46,10 @@ class GloVe:
         embeddings = []
         for word in word_array.split(" "):
             if word in self.embeddings_dict.keys():
+                print(f'word is in embedding: {word}')
                 embeddings.append(self.embeddings_dict[word])
         if len(embeddings) == 0:
+            print('embeddings == 0')
             return 0
         return np.mean(embeddings)
 
