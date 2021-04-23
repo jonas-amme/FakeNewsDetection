@@ -5,8 +5,6 @@ import time
 import argparse
 from tqdm import tqdm
 
-
-# libs for creating the torch based network
 import torch
 from torch_geometric.data import Data
 
@@ -28,7 +26,7 @@ print(args)
 
 
 class GloVe:
-    def __init__(self, debug=True):
+    def __init__(self, debug=False):
         print(f"setting up GloVe dict")
         self.embeddings_dict = {}
 
@@ -202,7 +200,7 @@ if __name__ == "__main__":
         return folders
 
     # When Debug=True GloVe always returns 0 :)
-    glove = GloVe(debug=True)
+    glove = GloVe(debug=False)
     # args.dataset = data path of twitter data, to be entered in the beginning
     root = args.dataset
     # root = os.path.join("D:", "Onderzoek", "FakeNews", "fakenewsnet_dataset", "politifact")
