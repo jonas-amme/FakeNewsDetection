@@ -31,7 +31,7 @@ parser.add_argument('--seed', type=int, default=777, help='random seed')
 parser.add_argument('--device', type=str, default='cuda:7', help='specify cuda devices')
 
 # hyper-parameters
-parser.add_argument('--datapath', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades',
+parser.add_argument('--datapath', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades/output',
                     help='enter your data path')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
 parser.add_argument('--lr', type=float, default=0.00001, help='learning rate')
