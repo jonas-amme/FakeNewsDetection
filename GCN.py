@@ -28,7 +28,7 @@ parser = argparse.ArgumentParser()
 
 # original model parameters
 parser.add_argument('--seed', type=int, default=777, help='random seed')
-parser.add_argument('--device', type=str, default='cuda', help='specify cuda devices')
+parser.add_argument('--device', type=str, default='cuda:0', help='specify cuda devices')
 
 # hyper-parameters
 parser.add_argument('--datapath', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades/output',
