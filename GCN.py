@@ -28,16 +28,16 @@ parser = argparse.ArgumentParser()
 
 # original model parameters
 parser.add_argument('--seed', type=int, default=777, help='random seed')
-parser.add_argument('--device', type=str, default='cpu', help='specify cuda devices')  # TODO: change to gpu
+parser.add_argument('--device', type=str, default='cuda:7', help='specify cuda devices')
 
 # hyper-parameters
-parser.add_argument('--datapath', type=str, default='/data/s2583550/FakeNewsDetection/cascades',
+parser.add_argument('--datapath', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades',
                     help='enter your data path')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
-parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.00001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
 parser.add_argument('--nhid', type=int, default=128, help='hidden size')
-parser.add_argument('--epochs', type=int, default=10, help='maximum number of epochs')
+parser.add_argument('--epochs', type=int, default=100, help='maximum number of epochs')
 
 args = parser.parse_args()
 torch.manual_seed(args.seed)
@@ -66,10 +66,6 @@ print('Edge features: ', example.edge_attr)
 print('Label: ', example.y)
 print()
 
-# check some node features of raw cascades
-for i in range(5):
-    print(graph_data[i].x)
-
 # preprocess graph data
 graph_data = normalizeFeatures(graph_data)
 
@@ -90,7 +86,7 @@ class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        self.num_features = 9  # TODO: change to variable
+        self.num_features = 14  # TODO: change to variable
         self.nhid = args.nhid
 
         self.conv1 = GCNConv(self.num_features, self.nhid * 2)
