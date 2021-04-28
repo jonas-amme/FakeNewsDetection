@@ -18,7 +18,7 @@ from torch.nn import Linear
 from torch_geometric.nn import GCNConv, global_mean_pool
 from torch.utils.data import random_split
 from torch_geometric.data import DataLoader
-from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
+from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, roc_auc_score
 
 from LoadData import LoadData
 from preprocess import normalizeFeatures
@@ -32,7 +32,7 @@ parser.add_argument('--device', type=str, default='cuda:0', help='specify cuda d
 parser.add_argument('--data_path', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades/output', help='enter your data path')
 parser.add_argument('--model_path', type=str, default='/data/s2583550/FakeNewsDetection/model/', help='enter your model path')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
-parser.add_argument('--lr', type=float, default=0.00005, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.00001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
 parser.add_argument('--nhid', type=int, default=128, help='hidden size')
 parser.add_argument('--num_features', type=int, default=14, help='number of features')
@@ -119,7 +119,9 @@ def eval(log):
         precision += precision_score(y, pred_y, zero_division=0)
         recall += recall_score(y, pred_y, zero_division=0)
 
-    return accuracy / len(log), f1_macro / len(log), precision / len(log), recall / len(log)
+    auc = roc_auc_score(label_log, prob_log)
+
+    return accuracy / len(log), f1_macro / len(log), precision / len(log), recall / len(log), auc
 
 
 def compute_test(loader):
@@ -165,8 +167,8 @@ if __name__ == '__main__':
             out_log.append([F.softmax(out, dim=1), y])
 
         # model validation
-        acc_train, _, _, recall_train = eval(out_log)
-        [acc_val, _, _, recall_val], loss_val = compute_test(val_loader)
+        acc_train, _, _, recall_train, _ = eval(out_log)
+        [acc_val, _, _, recall_val, _], loss_val = compute_test(val_loader)
 
         loss_train_list.append(loss_train)
         loss_val_list.append(loss_val)
@@ -179,7 +181,7 @@ if __name__ == '__main__':
 
     # create model dictionary
     model_dict = {
-        'epochs': args.epoch,
+        'epochs': args.epochs,
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'loss_train': loss_train_list,
@@ -192,6 +194,6 @@ if __name__ == '__main__':
     torch.save(model_dict, args.model_path + 'model_simple_cascades.pt')
 
     # model test
-    [acc, f1_macro, precision, recall], test_loss = compute_test(test_loader)
+    [acc, f1_macro, precision, recall, auc], test_loss = compute_test(test_loader)
     print(f'Test set results: acc: {acc:.4f}, f1_macro: {f1_macro:.4f}, '
-          f'precision: {precision:.4f}, recall: {recall:.4f}')
+          f'precision: {precision:.4f}, recall: {recall:.4f}, AUC: {auc}')
