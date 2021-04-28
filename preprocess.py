@@ -195,7 +195,7 @@ def normalizeFeatures(data):
     print('====== Example of standardized cascade ======')
     example = final_graph_dataset[0]
     print('Cascade object: ', example)
-    print('Edge indices', example.edge_index)
+    print('Edge indices:', example.edge_index)
     print('Feature matrix: ', example.x)
     print('Edge features: ', example.edge_attr)
     print('Label: ', example.y)

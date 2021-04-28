@@ -26,17 +26,16 @@ from preprocess import normalizeFeatures
 # initialize arguments
 parser = argparse.ArgumentParser()
 
-# original model parameters
+# specify model parameters
 parser.add_argument('--seed', type=int, default=777, help='random seed')
 parser.add_argument('--device', type=str, default='cuda:0', help='specify cuda devices')
-
-# hyper-parameters
-parser.add_argument('--datapath', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades/output',
-                    help='enter your data path')
+parser.add_argument('--data_path', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades/output', help='enter your data path')
+parser.add_argument('--model_path', type=str, default='data/s2583550/FakeNewsDetection/model/', help='enter your model path')
 parser.add_argument('--batch_size', type=int, default=1, help='batch size')
-parser.add_argument('--lr', type=float, default=0.00001, help='learning rate')
+parser.add_argument('--lr', type=float, default=0.00005, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
 parser.add_argument('--nhid', type=int, default=128, help='hidden size')
+parser.add_argument('--num_features', type=int, default=14, help='number of features')
 parser.add_argument('--epochs', type=int, default=100, help='maximum number of epochs')
 
 args = parser.parse_args()
@@ -48,7 +47,7 @@ if torch.cuda.is_available():
 print(args)
 
 # Load Data
-dataloader = LoadData(args.datapath)  # args.datapath = data path of twitter data, to be specified in beginning
+dataloader = LoadData(args.data_path)  # args.data_path = data path of twitter data, to be specified in beginning
 graph_data = dataloader.graph_data
 real_data = dataloader.real_data
 fake_data = dataloader.fake_data
@@ -76,9 +75,9 @@ num_test = len(graph_data) - (num_training + num_val)
 training_set, validation_set, test_set = random_split(graph_data, [num_training, num_val, num_test])
 
 # create dataloader objects
-train_loader = DataLoader(training_set, batch_size=1, shuffle=True)
-val_loader = DataLoader(validation_set, batch_size=1, shuffle=False)
-test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
+train_loader = DataLoader(training_set, batch_size=args.batch_size, shuffle=True)
+val_loader = DataLoader(validation_set, batch_size=args.batch_size, shuffle=False)
+test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False)
 
 
 # Create the model 
@@ -86,7 +85,7 @@ class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        self.num_features = 14  # TODO: change to variable
+        self.num_features = args.num_features
         self.nhid = args.nhid
 
         self.conv1 = GCNConv(self.num_features, self.nhid * 2)
@@ -141,10 +140,13 @@ def compute_test(loader):
 model = Net().to(args.device)
 optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-
 if __name__ == '__main__':
     # model training
-    out_log = []
+    out_log = list()
+    loss_train_list = list()
+    loss_val_list = list()
+    acc_train_list = list()
+    acc_val_list = list()
 
     t = time.time()
     model.train()
@@ -165,9 +167,29 @@ if __name__ == '__main__':
         # model validation
         acc_train, _, _, recall_train = eval(out_log)
         [acc_val, _, _, recall_val], loss_val = compute_test(val_loader)
+
+        loss_train_list.append(loss_train)
+        loss_val_list.append(loss_val)
+        acc_train_list.append(acc_train)
+        acc_val_list.append(acc_val)
+
         print(f'loss_train: {loss_train:.4f}, acc_train: {acc_train:.4f},'
               f' recall_train: {recall_train:.4f}, loss_val: {loss_val:.4f},'
               f' acc_val: {acc_val:.4f}, recall_val: {recall_val:.4f}')
+
+    # create model dictionary
+    model_dict = {
+        'epochs': args.epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss_train': loss_train_list,
+        'loss_val': loss_val_list,
+        'acc_train': acc_train_list,
+        'acc_val': acc_val_list
+    }
+
+    # save trained model
+    torch.save(model_dict, args.model_path + 'model_simple_cascades.pt')
 
     # model test
     [acc, f1_macro, precision, recall], test_loss = compute_test(test_loader)
