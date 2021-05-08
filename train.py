@@ -206,11 +206,13 @@ m4 = Net4(name='GAT')
 models = [m1, m2, m3, m4]
 
 
+print('Start training ... \n')
 
 if __name__ == '__main__':
 
     # model training
     for model in models:
+        print(f'============= {model.name} =============')
 
         # to GPU
         model.to(args.device)
@@ -249,7 +251,6 @@ if __name__ == '__main__':
             acc_train_list.append(acc_train)
             acc_val_list.append(acc_val)
 
-            print(f'============ {model.name} ============')
             print(f'loss_train: {loss_train:.4f}, acc_train: {acc_train:.4f},'
                   f' recall_train: {recall_train:.4f}, loss_val: {loss_val:.4f},'
                   f' acc_val: {acc_val:.4f}, recall_val: {recall_val:.4f}')
@@ -271,6 +272,5 @@ if __name__ == '__main__':
 
         # model test
         [_, _, acc, f1_macro, precision, recall], test_loss = compute_test(test_loader)
-        print(f'============ {model.name} ============')
         print(f'Test set results: acc: {acc:.4f}, f1_macro: {f1_macro:.4f}, '
               f'precision: {precision:.4f}, recall: {recall:.4f}')
