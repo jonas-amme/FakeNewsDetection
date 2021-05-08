@@ -112,7 +112,6 @@ class Net2(torch.nn.Module):
 # GIN + TopKPooling
 class Net3(torch.nn.Module):
     def __init__(self, name):
-        # print('init net 2')
         super(Net3, self).__init__()
 
         self.name = name
@@ -207,10 +206,14 @@ m4 = Net4(name='GAT')
 models = [m1, m2, m3, m4]
 
 
+
 if __name__ == '__main__':
 
     # model training
     for model in models:
+
+        # to GPU
+        model.to(args.device)
 
         # initialize optimizer
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
