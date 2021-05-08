@@ -241,7 +241,7 @@ if __name__ == '__main__':
                 out_log.append([F.softmax(out, dim=1), y])
 
             # model validation
-            _, _, acc_train, _, _, recall_train, _ = eval(out_log)
+            _, _, acc_train, _, _, recall_train = eval(out_log)
             [_, _, acc_val, f1_macro, precision, recall_val], loss_val = compute_test(val_loader)
 
             loss_train_list.append(loss_train)
