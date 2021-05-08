@@ -6,7 +6,8 @@ import argparse
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear
-from torch_geometric.nn import GCNConv, global_mean_pool
+from torch_geometric.nn import GATConv, GCNConv, GraphConv, TopKPooling
+from torch_geometric.nn import global_mean_pool, global_max_pool
 from torch.utils.data import random_split
 from torch_geometric.data import DataLoader
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, roc_auc_score
