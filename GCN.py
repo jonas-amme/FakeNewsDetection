@@ -32,8 +32,8 @@ parser.add_argument('--device', type=str, default='cuda:0', help='specify cuda d
 parser.add_argument('--data_path', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades/output', help='enter your data path')
 parser.add_argument('--model_path', type=str, default='/data/s2583550/FakeNewsDetection/model/', help='enter your model path')
 parser.add_argument('--save_name', type=str, default='model.pt', help='enter your model name')
-parser.add_argument('--batch_size', type=int, default=1, help='batch size')
-parser.add_argument('--lr', type=float, default=0.00001, help='learning rate')
+parser.add_argument('--batch_size', type=int, default=32, help='batch size')
+parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
 parser.add_argument('--nhid', type=int, default=128, help='hidden size')
 parser.add_argument('--num_features', type=int, default=14, help='number of features')
@@ -197,4 +197,4 @@ if __name__ == '__main__':
     # model test
     [acc, f1_macro, precision, recall, auc], test_loss = compute_test(test_loader)
     print(f'Test set results: acc: {acc:.4f}, f1_macro: {f1_macro:.4f}, '
-          f'precision: {precision:.4f}, recall: {recall:.4f}, AUC: {auc}')
+          f'precision: {precision:.4f}, recall: {recall:.4f}, AUC: {auc:.4f}')
