@@ -85,7 +85,7 @@ class Net1(torch.nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=-1)
 
-# GIN
+# kGNN
 class Net2(torch.nn.Module):
     def __init__(self, name):
         super(Net2, self).__init__()
@@ -109,7 +109,7 @@ class Net2(torch.nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=-1)
 
-# GIN + TopKPooling
+# kGNN + TopKPooling
 class Net3(torch.nn.Module):
     def __init__(self, name):
         super(Net3, self).__init__()
@@ -141,7 +141,7 @@ class Net3(torch.nn.Module):
         x = F.log_softmax(self.lin3(x), dim=-1)
         return x
 
-
+# GAT
 class Net4(torch.nn.Module):
     def __init__(self, name):
         super(Net4, self).__init__()
@@ -200,8 +200,8 @@ def compute_test(loader):
 
 # create models
 m1 = Net1(name='GCN')
-m2 = Net2(name='GIN')
-m3 = Net3(name='GIN_TopK')
+m2 = Net2(name='kGNN')
+m3 = Net3(name='kGNN_TopK')
 m4 = Net4(name='GAT')
 models = [m1, m2, m3, m4]
 

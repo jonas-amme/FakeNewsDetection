@@ -44,8 +44,8 @@ test_loader = DataLoader(test_set, batch_size=32, shuffle=False)
 
 # create models
 m1 = Net1(name='GCN')
-m2 = Net2(name='GIN')
-m3 = Net3(name='GIN_TopK')
+m2 = Net2(name='kGNN')
+m3 = Net3(name='kGNN_TopK')
 m4 = Net4(name='GAT')
 models = [m1, m2, m3, m4]
 

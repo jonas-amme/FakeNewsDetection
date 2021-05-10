@@ -32,7 +32,7 @@ class Net1(torch.nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=-1)
 
-# GIN
+# kGNN
 class Net2(torch.nn.Module):
     def __init__(self, name):
         super(Net2, self).__init__()
@@ -56,7 +56,7 @@ class Net2(torch.nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=-1)
 
-# GIN + TopKPooling
+# kGNN + TopKPooling
 class Net3(torch.nn.Module):
     def __init__(self, name):
         super(Net3, self).__init__()
