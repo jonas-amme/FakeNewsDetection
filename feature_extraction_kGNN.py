@@ -110,7 +110,11 @@ def show_TSNE_embedding(features, labels_list, legend=['Fake', 'True']):
     plt.show()
 
 
+# show results
 show_TSNE_embedding(features_data, labels_list)
+
+# save figure
+plt.savefig(os.path.join(data_path, 'plots', 'tsne_kGNN.png'))
 
 
 # compute umap embedding
@@ -129,4 +133,8 @@ def show_UMAP_embedding(features, labels_list, legend=['Fake', 'True']):
     plt.show()
 
 
+# show results
 show_UMAP_embedding(features_data, labels_list)
+
+# save figure
+plt.savefig(os.path.join(data_path, 'plots', 'umap_kGNN.png'))
