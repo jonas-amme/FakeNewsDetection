@@ -19,4 +19,4 @@ if __name__ == '__main__':
     graph_data = dataloader.graph_data
 
     # save data
-    torch.save(args.model_path + 'graph_data.pt')
+    torch.save(graph_data, args.model_path + 'graph_data.pt')
