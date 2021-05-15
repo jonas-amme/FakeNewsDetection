@@ -66,10 +66,10 @@ def normalizeCascade(cascade, Means, Sigmas):
         normalized_nodefeatures.append(normalize(feature[9], Means['tweet_created_at'], Sigmas['tweet_created_at']))
         normalized_nodefeatures.append(normalize(feature[10], Means['source'], Sigmas['source']))
         normalized_nodefeatures.append(normalize(feature[11], Means['retweet_count'], Sigmas['retweet_count']))
-        # normalized_nodefeatures.append(normalize(feature[12], Means['favorite_count'], Sigmas['favorite_count']))
+        normalized_nodefeatures.append(normalize(feature[12], Means['favorite_count'], Sigmas['favorite_count']))
         normalized_nodefeatures.append(normalize(feature[13], Means['text'], Sigmas['text']))
         normalized_nodefeatures.append(normalize(feature[14], Means['hashtag'], Sigmas['hashtag']))
-        # normalized_nodefeatures.append(normalize(feature[15], Means['is_value'], Sigmas['is_value']))
+        normalized_nodefeatures.append(normalize(feature[15], Means['is_value'], Sigmas['is_value']))
 
         # add to new feature matrix
         x.append(normalized_nodefeatures)
@@ -96,10 +96,10 @@ def normalizeFeatures(data):
     tweet_created_at = list()
     source = list()
     retweet_count = list()
-    # favorite_count = list()
+    favorite_count = list()
     text = list()
     hashtag = list()
-    # is_value = list()
+    is_value = list()
 
 
     # initialize total feature dict
@@ -121,10 +121,10 @@ def normalizeFeatures(data):
             tweet_created_at.extend([feature[9]])
             source.extend([feature[10]])
             retweet_count.extend([feature[11]])
-            # favorite_count.extend([feature[12]])
+            favorite_count.extend([feature[12]])
             text.extend([feature[13]])
             hashtag.extend([feature[14]])
-            # is_value.extend([feature[15]])
+            is_value.extend([feature[15]])
 
 
     # store all means
@@ -141,10 +141,10 @@ def normalizeFeatures(data):
     Means['tweet_created_at'] = np.mean(tweet_created_at)
     Means['source'] = np.mean(source)
     Means['retweet_count'] = np.mean(retweet_count)
-    # Means['favorite_count'] = np.mean(favorite_count)
+    Means['favorite_count'] = np.mean(favorite_count)
     Means['text'] = np.mean(text)
     Means['hashtag'] = np.mean(hashtag)
-    # Means['is_value'] = np.mean(is_value)
+    Means['is_value'] = np.mean(is_value)
 
     print()
     print('====== Mean values of node features ======')
@@ -166,10 +166,10 @@ def normalizeFeatures(data):
     Sigmas['tweet_created_at'] = np.std(tweet_created_at)
     Sigmas['source'] = np.std(source)
     Sigmas['retweet_count'] = np.std(retweet_count)
-    # Sigmas['favorite_count'] = np.std(favorite_count)
+    Sigmas['favorite_count'] = np.std(favorite_count)
     Sigmas['text'] = np.std(text)
     Sigmas['hashtag'] = np.std(hashtag)
-    # Sigmas['is_value'] = np.std(is_value)
+    Sigmas['is_value'] = np.std(is_value)
 
     print()
     print('====== Standard deviations of node features ======')
