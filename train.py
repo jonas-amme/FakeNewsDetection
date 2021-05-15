@@ -24,6 +24,7 @@ parser.add_argument('--seed', type=int, default=777, help='random seed')
 parser.add_argument('--device', type=str, default='cuda:0', help='specify cuda devices')
 parser.add_argument('--data_path', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades/output', help='enter your data path')
 parser.add_argument('--model_path', type=str, default='/data/s2583550/FakeNewsDetection/model/', help='enter your model path')
+parser.add_argument('--save_name', type=str, default='default', help='enter save name for model state dict')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
@@ -268,7 +269,7 @@ if __name__ == '__main__':
         }
 
         # save trained model
-        torch.save(model_dict, args.model_path + model.name + '.pt')
+        torch.save(model_dict, args.model_path + args.save_name + model.name + '.pt')
 
         # model test
         [_, _, acc, f1_macro, precision, recall], test_loss = compute_test(test_loader)
