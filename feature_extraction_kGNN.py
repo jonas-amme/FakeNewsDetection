@@ -2,6 +2,7 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn.functional as F
 from torch_geometric.data import DataLoader
@@ -18,14 +19,10 @@ nhid = 128
 
 # Load Data
 data_path = os.getcwd()
-dataloader = LoadData('../00_Data/simple_cascades/output')
-graph_data = dataloader.graph_data
+graph_data = torch.load(data_path + '/graph_data.pt')
 
 # preprocess graph data
-graph_data = normalizeFeatures(graph_data)
-
-# set seed
-torch.manual_seed(777)  # reproduces the same data split as during training
+graph_data = normalizeFeatures(graph_data, as_baseline=True)
 
 
 # kGNN
@@ -56,7 +53,7 @@ model = FeatureExtractor()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.01)
 param_groups = optimizer.state_dict()['param_groups']
 
-checkpoint = torch.load(os.path.join(data_path, 'model', 'GIN.pt'), map_location=torch.device('cpu'))
+checkpoint = torch.load(os.path.join(data_path, 'model', 'kGNN.pt'), map_location=torch.device('cpu'))
 dropped_layers = ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias']
 dropped_params = [6, 7, 8, 9]
 
@@ -87,9 +84,13 @@ dataloader = DataLoader(graph_data, batch_size=1)
 for data in dataloader:
     with torch.no_grad():
         label = data.y
-        feature = model(data.x, data.edge_index, data.batch)
+        try:
+            feature = model(data.x, data.edge_index, data.batch)
+        except AssertionError:
+            continue
         features_list.append(np.array(feature))
         labels_list.extend(np.repeat(label, len(feature)))
+
 
 # stack features vertically for vertex wise results
 features_data = np.vstack(features_list)
@@ -99,6 +100,7 @@ features_data = np.vstack(features_list)
 def show_TSNE_embedding(features, labels_list, legend=['Fake', 'True']):
     tsne = TSNE(n_components=2, init='pca', random_state=0)
     features_tsne = tsne.fit_transform(features)
+    plt.figure(figsize=(6, 6))
     scatter = plt.scatter(features_tsne[:, 0], features_tsne[:, 1],
                           c=labels_list, edgecolor='none', alpha=0.4,
                           cmap=plt.cm.get_cmap('viridis', 2))
@@ -114,13 +116,14 @@ def show_TSNE_embedding(features, labels_list, legend=['Fake', 'True']):
 show_TSNE_embedding(features_data, labels_list)
 
 # save figure
-plt.savefig(os.path.join(data_path, 'plots', 'tsne_kGNN.png'))
+plt.savefig(os.path.join(data_path, 'plots', 'baseline_tsne_kGNN.png'))
 
 
 # compute umap embedding
 def show_UMAP_embedding(features, labels_list, legend=['Fake', 'True']):
     reducer = umap.UMAP()
     embedding = reducer.fit_transform(features)
+    plt.figure(figsize=(8, 8))
     scatter = plt.scatter(embedding[:, 0], embedding[:, 1],
                           c=labels_list, edgecolor='none', alpha=0.4,
                           cmap=plt.cm.get_cmap('viridis', 2))
@@ -137,4 +140,4 @@ def show_UMAP_embedding(features, labels_list, legend=['Fake', 'True']):
 show_UMAP_embedding(features_data, labels_list)
 
 # save figure
-plt.savefig(os.path.join(data_path, 'plots', 'umap_kGNN.png'))
+plt.savefig(os.path.join(data_path, 'plots', 'is_umap_kGNN.png'))
