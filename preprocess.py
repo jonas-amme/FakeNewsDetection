@@ -28,9 +28,10 @@ from torch_geometric.data import Data
 # 16 interaction strength
 
 
-def change_indices(cascade):
-    origin = np.zeros(len(cascade.edge_index[0]))
-    destination = np.arange(len(cascade.edge_index[0]))
+def change_to_baseline(cascade):
+    N = len(cascade.x) - 1   # root id and no. edges
+    origin = np.repeat(N, N)
+    destination = np.arange(N)
     indices = torch.tensor(np.array((origin, destination)), dtype=torch.long)
     return Data(x=cascade.x, edge_index=indices, y=cascade.y)
 
@@ -66,7 +67,7 @@ def normalizeCascade(cascade, Means, Sigmas):
         normalized_nodefeatures.append(normalize(feature[9], Means['tweet_created_at'], Sigmas['tweet_created_at']))
         normalized_nodefeatures.append(normalize(feature[10], Means['source'], Sigmas['source']))
         normalized_nodefeatures.append(normalize(feature[11], Means['retweet_count'], Sigmas['retweet_count']))
-        normalized_nodefeatures.append(normalize(feature[12], Means['favorite_count'], Sigmas['favorite_count']))
+        # normalized_nodefeatures.append(normalize(feature[12], Means['favorite_count'], Sigmas['favorite_count']))
         normalized_nodefeatures.append(normalize(feature[13], Means['text'], Sigmas['text']))
         normalized_nodefeatures.append(normalize(feature[14], Means['hashtag'], Sigmas['hashtag']))
         normalized_nodefeatures.append(normalize(feature[15], Means['is_value'], Sigmas['is_value']))
@@ -81,7 +82,7 @@ def normalizeCascade(cascade, Means, Sigmas):
     return Data(x=x, edge_index=cascade.edge_index, y=y)
 
 
-def normalizeFeatures(data):
+def normalizeFeatures(data, as_baseline=False):
 
     # initialize lists of all features
     location = list()
@@ -96,7 +97,7 @@ def normalizeFeatures(data):
     tweet_created_at = list()
     source = list()
     retweet_count = list()
-    favorite_count = list()
+    # favorite_count = list()
     text = list()
     hashtag = list()
     is_value = list()
@@ -121,10 +122,12 @@ def normalizeFeatures(data):
             tweet_created_at.extend([feature[9]])
             source.extend([feature[10]])
             retweet_count.extend([feature[11]])
-            favorite_count.extend([feature[12]])
+            # favorite_count.extend([feature[12]])
             text.extend([feature[13]])
             hashtag.extend([feature[14]])
-            is_value.extend([feature[15]])
+
+            if not as_baseline:
+                is_value.extend([feature[15]])
 
 
     # store all means
@@ -141,7 +144,7 @@ def normalizeFeatures(data):
     Means['tweet_created_at'] = np.mean(tweet_created_at)
     Means['source'] = np.mean(source)
     Means['retweet_count'] = np.mean(retweet_count)
-    Means['favorite_count'] = np.mean(favorite_count)
+    # Means['favorite_count'] = np.mean(favorite_count)
     Means['text'] = np.mean(text)
     Means['hashtag'] = np.mean(hashtag)
     Means['is_value'] = np.mean(is_value)
@@ -166,7 +169,7 @@ def normalizeFeatures(data):
     Sigmas['tweet_created_at'] = np.std(tweet_created_at)
     Sigmas['source'] = np.std(source)
     Sigmas['retweet_count'] = np.std(retweet_count)
-    Sigmas['favorite_count'] = np.std(favorite_count)
+    # Sigmas['favorite_count'] = np.std(favorite_count)
     Sigmas['text'] = np.std(text)
     Sigmas['hashtag'] = np.std(hashtag)
     Sigmas['is_value'] = np.std(is_value)
@@ -185,11 +188,11 @@ def normalizeFeatures(data):
     # normalize each cascade and add to new dataset
     final_graph_dataset = list()
     for cascade in tqdm(data):
-        try:  # replace origin index with zero
-            cascade = change_indices(cascade)
-        except IndexError:
-            continue
-        final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas))
+        if as_baseline:
+            cascade = change_to_baseline(cascade)
+            final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas))
+        else:
+            final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas))
 
     print()
     print('====== Example of standardized cascade ======')
