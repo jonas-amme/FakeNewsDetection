@@ -15,39 +15,52 @@ import numpy as np
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+import itertools
 
 from LoadData import LoadData
 from preprocess import normalizeFeatures
 from models import Net1, Net2, Net3, Net4
 
 # Load Data
-dataloader = LoadData('../00_Data/simple_cascades/output')
-graph_data = dataloader.graph_data
 data_path = os.getcwd()
+graph_data = torch.load(data_path + '/graph_data.pt')
 
 # preprocess graph data
-graph_data = normalizeFeatures(graph_data)
+baseline_data = normalizeFeatures(graph_data, as_baseline=True)
+is_data = normalizeFeatures(graph_data, as_baseline=False)
 
 # set seed
-torch.manual_seed(777)  # reproduces the same data split as during training
+torch.manual_seed(777)
 
 # create train, val test split
-num_training = int(len(graph_data) * 0.6)
-num_val = int(len(graph_data) * 0.2)
+num_training = int(len(graph_data) * 0.7)
+num_val = int(len(graph_data) * 0.1)
 num_test = len(graph_data) - (num_training + num_val)
-training_set, validation_set, test_set = random_split(graph_data, [num_training, num_val, num_test])
+
+# split baseline data
+_, _, base_test_set = random_split(baseline_data, [num_training, num_val, num_test],
+                                   generator=torch.Generator().manual_seed(42))
+
+# split is data
+_, _, is_test_set = random_split(is_data, [num_training, num_val, num_test],
+                                 generator=torch.Generator().manual_seed(42))
 
 # create dataloader objects
-train_loader = DataLoader(training_set, batch_size=32, shuffle=True)
-val_loader = DataLoader(validation_set, batch_size=32, shuffle=False)
-test_loader = DataLoader(test_set, batch_size=32, shuffle=False)
+base_test_loader = DataLoader(base_test_set, batch_size=32, shuffle=False)
+is_test_loader = DataLoader(is_test_set, batch_size=32, shuffle=False)
 
 # create models
 m1 = Net1(name='GCN')
 m2 = Net2(name='kGNN')
 m3 = Net3(name='kGNN_TopK')
 m4 = Net4(name='GAT')
-models = [m1, m2, m3, m4]
+baseline_models = [m1, m2, m3, m4]
+
+m5 = Net1(name='IS_GCN')
+m6 = Net2(name='IS_kGNN')
+m7 = Net3(name='IS_kGNN_TopK')
+m8 = Net4(name='IS_GAT')
+is_models = [m5, m6, m7, m8]
 
 
 def eval(log):
@@ -68,7 +81,7 @@ def eval(log):
     return label_log, prob_log, accuracy / len(log), f1_macro / len(log), precision / len(log), recall / len(log)
 
 
-def compute_test(loader):
+def compute_test(model, loader):
     model.eval()
     loss_test = 0.0
     out_log = []
@@ -82,40 +95,48 @@ def compute_test(loader):
     return eval(out_log), loss_test
 
 
-# initialize list of scores
-scores_list = list()
+def evaluate_models(model_list, test_loader):
+    # initialize list of scores
+    scores_list = list()
 
-# evaluate all models
-for model in models:
-    scores = dict()
+    for model in model_list:
+        scores = dict()
 
-    # load the model
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.01)
-    checkpoint = torch.load(os.path.join(data_path, 'model', model.name + '.pt'), map_location=torch.device('cpu'))
-    model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        # load the model
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.01)
+        checkpoint = torch.load(os.path.join(data_path, 'model', model.name + '.pt'), map_location=torch.device('cpu'))
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
-    # add checkpoint to scores dict
-    scores['name'] = model.name
-    scores['checkpoint'] = checkpoint
+        # add checkpoint to scores dict
+        scores['name'] = model.name
+        scores['checkpoint'] = checkpoint
 
-    # evaluate on test set
-    [label_log, prob_log, acc, f1_macro, precision, recall], test_loss = compute_test(test_loader)
-    print(f'============ {model.name} ============')
-    print(f'Test set results: acc: {acc:.4f}, f1_macro: {f1_macro:.4f}, '
-          f'precision: {precision:.4f}, recall: {recall:.4f}')
+        # evaluate on test set
+        [label_log, prob_log, acc, f1_macro, precision, recall], test_loss = compute_test(model, test_loader)
+        print(f'============ {model.name} ============')
+        print(f'Test set results: acc: {acc:.4f}, f1_macro: {f1_macro:.4f}, '
+              f'precision: {precision:.4f}, recall: {recall:.4f}')
 
-    # add test scores to scores
-    scores['label_log'] = label_log
-    scores['test_prob_log'] = prob_log
-    scores['test_acc'] = acc
-    scores['test_f1'] = f1_macro
-    scores['test_precision'] = precision
-    scores['test_recall'] = recall
-    scores['test_loss'] = test_loss
+        # add test scores to scores
+        scores['label_log'] = label_log
+        scores['test_prob_log'] = prob_log
+        scores['test_acc'] = acc
+        scores['test_f1'] = f1_macro
+        scores['test_precision'] = precision
+        scores['test_recall'] = recall
+        scores['test_loss'] = test_loss
+        scores['test_auc'] = roc_auc_score(label_log, prob_log)
 
-    # scores to list
-    scores_list.append(scores)
+        # scores to list
+        scores_list.append(scores)
+
+    return scores_list
+
+
+# evaluate models
+baseline_scores = evaluate_models(baseline_models, base_test_loader)
+is_scores = evaluate_models(is_models, is_test_loader)
 
 
 # add baseline classifier
@@ -159,7 +180,7 @@ def extract_avg_feature(data):
 avg_graph_data = extract_avg_feature(graph_data)
 
 # create train test split
-train, test = train_test_split(avg_graph_data, test_size=0.2)
+train, test = train_test_split(avg_graph_data, test_size=0.2, random_state=0)
 x_train, x_test = train.drop('label', axis=1), test.drop('label', axis=1)
 y_train, y_test = train['label'], test['label']
 
@@ -169,7 +190,15 @@ score_logreg['name'] = 'Logistic Regression'
 score_logreg['label_log'] = y_test
 clf_logreg = LogisticRegression(random_state=0).fit(x_train, y_train)
 score_logreg['test_prob_log'] = clf_logreg.predict_proba(x_test)[:, 1]
-scores_list.append(score_logreg)
+y_test_pred = clf_logreg.predict(x_test)
+score_logreg['test_acc'] = accuracy_score(y_test, y_test_pred)
+score_logreg['test_f1'] = f1_score(y_test, y_test_pred, average='macro')
+score_logreg['test_precision'] = precision_score(y_test, y_test_pred, zero_division=0)
+score_logreg['test_recall'] = recall_score(y_test, y_test_pred, zero_division=0)
+score_logreg['test_auc'] = roc_auc_score(y_test, score_logreg['test_prob_log'])
+baseline_scores.append(score_logreg)
+is_scores.append(score_logreg)
+
 
 # perform random forest
 score_rf = dict()
@@ -177,7 +206,14 @@ score_rf['name'] = 'Random Forest'
 score_rf['label_log'] = y_test
 clf_rf = RandomForestClassifier(max_depth=2, random_state=0).fit(x_train, y_train)
 score_rf['test_prob_log'] = clf_rf.predict_proba(x_test)[:, 1]
-scores_list.append(score_rf)
+y_test_pred = clf_rf.predict(x_test)
+score_rf['test_acc'] = accuracy_score(y_test, y_test_pred)
+score_rf['test_f1'] = f1_score(y_test, y_test_pred, average='macro')
+score_rf['test_precision'] = precision_score(y_test, y_test_pred, zero_division=0)
+score_rf['test_recall'] = recall_score(y_test, y_test_pred, zero_division=0)
+score_rf['test_auc'] = roc_auc_score(y_test, score_rf['test_prob_log'])
+baseline_scores.append(score_rf)
+is_scores.append(score_rf)
 
 
 # plot results
@@ -185,19 +221,19 @@ scores_list.append(score_rf)
 # plot performance during training
 def show_training(model_list):
     fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True)
-    for model_list in scores_list:
+    for model in model_list:
         try:
-            axes[0, 0].plot(model_list['checkpoint']['loss_train'], label=model_list['checkpoint']['name'])
+            axes[0, 0].plot(model['checkpoint']['loss_train'], label=model['checkpoint']['name'])
             axes[0, 0].set_title('Training loss')
 
-            axes[0, 1].plot(model_list['checkpoint']['acc_train'], label=model_list['checkpoint']['name'])
+            axes[0, 1].plot(model['checkpoint']['acc_train'], label=model['checkpoint']['name'])
             axes[0, 1].set_title('Training accuracy')
             axes[0, 1].legend(loc='lower right', prop={'size': 8})
 
-            axes[1, 0].plot(model_list['checkpoint']['loss_val'], label=model_list['checkpoint']['name'])
+            axes[1, 0].plot(model['checkpoint']['loss_val'], label=model['checkpoint']['name'])
             axes[1, 0].set_title('Validation loss')
 
-            axes[1, 1].plot(model_list['checkpoint']['acc_val'], label=model_list['checkpoint']['name'])
+            axes[1, 1].plot(model['checkpoint']['acc_val'], label=model['checkpoint']['name'])
             axes[1, 1].set_title('Validation accuracy')
         except KeyError:
             continue
@@ -206,7 +242,59 @@ def show_training(model_list):
     plt.show()
 
 
-show_training(scores_list)
+# show results
+show_training(baseline_scores)
+plt.savefig(os.path.join(data_path, 'plots', 'baseline_training.png'))
+
+# show is results
+show_training(is_scores)
+plt.savefig(os.path.join(data_path, 'plots', 'is_training.png'))
+
+
+# plot performance during training
+def compare_training(base_list, is_list):
+    fig, axes = plt.subplots(nrows=2, ncols=2, sharex=True, figsize=(10, 7))
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color'][:4]
+    for i, model in enumerate(base_list):
+        try:
+            axes[0, 0].plot(model['checkpoint']['loss_train'], label=model['checkpoint']['name'], color=colors[i])
+            axes[0, 0].set_title('Training loss')
+
+            axes[0, 1].plot(model['checkpoint']['acc_train'], label=model['checkpoint']['name'], color=colors[i])
+            axes[0, 1].set_title('Training accuracy')
+            axes[0, 1].legend(loc='lower right', prop={'size': 8})
+
+            axes[1, 0].plot(model['checkpoint']['loss_val'], label=model['checkpoint']['name'], color=colors[i])
+            axes[1, 0].set_title('Validation loss')
+
+            axes[1, 1].plot(model['checkpoint']['acc_val'], label=model['checkpoint']['name'], color=colors[i])
+            axes[1, 1].set_title('Validation accuracy')
+        except KeyError:
+            continue
+    for i, model in enumerate(is_list):
+        try:
+            axes[0, 0].plot(model['checkpoint']['loss_train'], '--', label=model['checkpoint']['name'], color=colors[i])
+            axes[0, 0].set_title('Training loss')
+
+            axes[0, 1].plot(model['checkpoint']['acc_train'], '--', label=model['checkpoint']['name'], color=colors[i])
+            axes[0, 1].set_title('Training accuracy')
+            axes[0, 1].legend(loc='lower right', prop={'size': 7})
+
+            axes[1, 0].plot(model['checkpoint']['loss_val'], '--', label=model['checkpoint']['name'], color=colors[i])
+            axes[1, 0].set_title('Validation loss')
+
+            axes[1, 1].plot(model['checkpoint']['acc_val'], '--', label=model['checkpoint']['name'], color=colors[i])
+            axes[1, 1].set_title('Validation accuracy')
+        except KeyError:
+            continue
+    plt.xlabel('Epoch')
+    plt.tight_layout()
+    plt.show()
+
+
+# show results
+compare_training(baseline_scores, is_scores)
+plt.savefig(os.path.join(data_path, 'plots', 'compare_training.png'))
 
 
 # compute AUC
@@ -225,7 +313,43 @@ def show_roc_curves(model_list):
     plt.show()
 
 
-show_roc_curves(scores_list)
+# show results
+show_roc_curves(baseline_scores)
+plt.savefig(os.path.join(data_path, 'plots', 'baseline_auc.png'))
+
+# show results
+show_roc_curves(is_scores)
+plt.savefig(os.path.join(data_path, 'plots', 'is_auc.png'))
+
+
+# compute AUC
+def compare_roc_curves(base_list, is_list):
+    plt.figure(figsize=(8, 6))
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color'][:6]
+    for i, model in enumerate(base_list[:4]):
+        auc = roc_auc_score(model['label_log'], model['test_prob_log'])
+        fpr, tpr, tr = roc_curve(model['label_log'], model['test_prob_log'])
+        plt.plot(fpr, tpr, label=f"{model['name']} (AUC {auc:.2f})", color=colors[i])
+    for i, model in enumerate(is_list[:4]):
+        auc = roc_auc_score(model['label_log'], model['test_prob_log'])
+        fpr, tpr, tr = roc_curve(model['label_log'], model['test_prob_log'])
+        plt.plot(fpr, tpr, '--', label=f"{model['name']} (AUC {auc:.2f})", color=colors[i])
+    for i, model in enumerate(base_list[4:]):
+        auc = roc_auc_score(model['label_log'], model['test_prob_log'])
+        fpr, tpr, tr = roc_curve(model['label_log'], model['test_prob_log'])
+        plt.plot(fpr, tpr, label=f"{model['name']} (AUC {auc:.2f})", color=colors[i + 4])
+    plt.plot([0, 1], [0, 1], linestyle='--', label="Line of no discrimination", color='grey')
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+    plt.xlabel(r'$1-S_p$')
+    plt.ylabel(r'$S_e$')
+    plt.legend(loc="lower right", prop={'size': 8})
+    plt.show()
+
+
+# show results
+compare_roc_curves(baseline_scores, is_scores)
+plt.savefig(os.path.join(data_path, 'plots', 'compare_auc.png'))
 
 
 def show_calibration_curve(model_list):
@@ -238,9 +362,36 @@ def show_calibration_curve(model_list):
     plt.ylim([-0.05, 1.05])
     plt.xlabel('Predicted')
     plt.ylabel('Observed')
-    plt.legend(loc="upper left", prop={'size': 8})
-    sns.rugplot(prob_log, axis='x', color='red')
+    plt.legend(loc="lower right", bbox_to_anchor=(0.95, 0.05), prop={'size': 8})
     plt.show()
 
 
-show_calibration_curve(scores_list)
+# show results
+show_calibration_curve(baseline_scores)
+plt.savefig(os.path.join(data_path, 'plots', 'baseline_calibration.png'))
+
+# show results
+show_calibration_curve(is_scores)
+plt.savefig(os.path.join(data_path, 'plots', 'is_calibration.png'))
+
+
+
+# create table of results
+baseline_scores[0].keys()
+
+keys = ['name', 'test_acc', 'test_f1', 'test_precision', 'test_recall', 'test_auc']
+names = ['Method', 'ACC', 'F1', 'Precision', 'Recall', 'AUC']
+
+all_scores = dict()
+for key in keys:
+    all_scores[key] = list()
+    for model in baseline_scores[:4]:
+        all_scores[key].append(model[key])
+    for model in is_scores:
+        all_scores[key].append(model[key])
+
+
+all_scores_df = pd.DataFrame.from_dict(all_scores).round(decimals=4)
+all_scores_df.columns = names
+print(all_scores_df.to_latex(index=False))
+
