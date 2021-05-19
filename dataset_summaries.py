@@ -1,13 +1,12 @@
 import os
 import pandas as pd
 import numpy as np
+import torch
 from LoadData import LoadData
 
 # Load Data
-dataloader = LoadData('../00_Data/simple_cascades/output')
-graph_data = dataloader.graph_data
 data_path = os.getcwd()
-
+graph_data = torch.load(data_path + '/graph_data.pt')
 
 def extract_nodewise_features(data):
     features_list = list()
@@ -115,3 +114,4 @@ cascades_comp = pd.concat([cascades_comp.reset_index(), cascades_ttest.reset_ind
 cascades_comp = cascades_comp.set_index('index')
 cascades_comp.columns = ['mean_fake', 'mean_real', 'std_fake', 'std_real', 't', 'p', 'p < 0.05']
 print(cascades_comp.drop(['account_creation', 'retweet_time']).to_latex(float_format='%.4f'))
+
