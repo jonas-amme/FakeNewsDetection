@@ -25,11 +25,12 @@ parser.add_argument('--device', type=str, default='cuda:0', help='specify cuda d
 parser.add_argument('--data_path', type=str, default='/data/s2583550/FakeNewsDetection/simple_cascades/output', help='enter your data path')
 parser.add_argument('--model_path', type=str, default='/data/s2583550/FakeNewsDetection/model/', help='enter your model path')
 parser.add_argument('--save_name', type=str, default='default', help='enter save name for model state dict')
+parser.add_argument('--as_baseline', type=bool, default=False, help='use IS cascades or baseline cascades')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size')
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
-parser.add_argument('--nhid', type=int, default=128, help='hidden size')
-parser.add_argument('--num_features', type=int, default=14, help='number of features')
+parser.add_argument('--nhid', type=int, default=64, help='hidden size')
+parser.add_argument('--num_features', type=int, default=15, help='number of features (14 for baseline)')
 parser.add_argument('--epochs', type=int, default=100, help='maximum number of epochs')
 
 args = parser.parse_args()
@@ -46,13 +47,14 @@ dataloader = LoadData(args.data_path)  # args.data_path = data path of twitter d
 graph_data = dataloader.graph_data
 
 # preprocess graph data
-graph_data = normalizeFeatures(graph_data)
+graph_data = normalizeFeatures(graph_data, as_baseline=args.as_baseline)
 
 # create train, val test split
-num_training = int(len(graph_data) * 0.6)
-num_val = int(len(graph_data) * 0.2)
+num_training = int(len(graph_data) * 0.7)
+num_val = int(len(graph_data) * 0.1)
 num_test = len(graph_data) - (num_training + num_val)
-training_set, validation_set, test_set = random_split(graph_data, [num_training, num_val, num_test])
+training_set, validation_set, test_set = random_split(graph_data, [num_training, num_val, num_test],
+                                                      generator=torch.Generator().manual_seed(42))
 
 # create dataloader objects
 train_loader = DataLoader(training_set, batch_size=args.batch_size, shuffle=True)
@@ -71,10 +73,10 @@ class Net1(torch.nn.Module):
         self.num_features = args.num_features
         self.nhid = args.nhid
 
-        self.conv1 = GCNConv(self.num_features, self.nhid * 2)
-        self.conv2 = GCNConv(self.nhid * 2, self.nhid * 2)
+        self.conv1 = GCNConv(self.num_features, self.nhid)
+        self.conv2 = GCNConv(self.nhid, self.nhid)
 
-        self.fc1 = Linear(self.nhid * 2, self.nhid)
+        self.fc1 = Linear(self.nhid, self.nhid)
         self.fc2 = Linear(self.nhid, 2)
 
     def forward(self, x, edge_index, batch):
@@ -95,10 +97,10 @@ class Net2(torch.nn.Module):
         self.num_features = args.num_features
         self.nhid = args.nhid
 
-        self.conv1 = GraphConv(self.num_features, self.nhid * 2)
-        self.conv2 = GraphConv(self.nhid * 2, self.nhid * 2)
+        self.conv1 = GraphConv(self.num_features, self.nhid)
+        self.conv2 = GraphConv(self.nhid, self.nhid)
 
-        self.fc1 = Linear(self.nhid * 2, self.nhid)
+        self.fc1 = Linear(self.nhid, self.nhid)
         self.fc2 = Linear(self.nhid, 2)
 
     def forward(self, x, edge_index, batch):
@@ -124,7 +126,7 @@ class Net3(torch.nn.Module):
         self.conv2 = GraphConv(self.nhid, self.nhid)
         self.pool2 = TopKPooling(self.nhid, ratio=0.8)
 
-        self.lin1 = torch.nn.Linear(self.nhid*2, self.nhid)
+        self.lin1 = torch.nn.Linear(self.nhid, self.nhid)
         self.lin2 = torch.nn.Linear(self.nhid, 32)
         self.lin3 = torch.nn.Linear(32, 2)
 
@@ -151,10 +153,10 @@ class Net4(torch.nn.Module):
         self.num_features = args.num_features
         self.nhid = args.nhid
 
-        self.conv1 = GATConv(self.num_features, self.nhid * 2)
-        self.conv2 = GATConv(self.nhid * 2, self.nhid * 2)
+        self.conv1 = GATConv(self.num_features, self.nhid)
+        self.conv2 = GATConv(self.nhid, self.nhid)
 
-        self.fc1 = Linear(self.nhid * 2, self.nhid)
+        self.fc1 = Linear(self.nhid, self.nhid)
         self.fc2 = Linear(self.nhid, 2)
 
     def forward(self, x, edge_index, batch):
