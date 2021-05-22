@@ -126,7 +126,7 @@ class Net3(torch.nn.Module):
         self.conv2 = GraphConv(self.nhid, self.nhid)
         self.pool2 = TopKPooling(self.nhid, ratio=0.8)
 
-        self.lin1 = torch.nn.Linear(self.nhid, self.nhid)
+        self.lin1 = torch.nn.Linear(self.nhid*2, self.nhid)
         self.lin2 = torch.nn.Linear(self.nhid, 32)
         self.lin3 = torch.nn.Linear(32, 2)
 
