@@ -134,7 +134,7 @@ class Net3(torch.nn.Module):
         x = F.relu(self.conv1(x, edge_index))
         x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
         x1 = torch.cat([global_mean_pool(x, batch), global_max_pool(x, batch)], dim=1)
-        x = F.relu(self.conv2(x, edge_index))nhi
+        x = F.relu(self.conv2(x, edge_index))
         x, edge_index, _, batch, _, _ = self.pool2(x, edge_index, None, batch)
         x2 = torch.cat([global_mean_pool(x, batch), global_max_pool(x, batch)], dim=1)
         x = x1 + x2
