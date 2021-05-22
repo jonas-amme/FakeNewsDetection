@@ -127,14 +127,14 @@ class Net3(torch.nn.Module):
         self.pool2 = TopKPooling(self.nhid, ratio=0.8)
 
         self.lin1 = torch.nn.Linear(self.nhid*2, self.nhid)
-        self.lin2 = torch.nn.Linear(self.nhid, 32)
-        self.lin3 = torch.nn.Linear(32, 2)
+        self.lin2 = torch.nn.Linear(self.nhid, 16)
+        self.lin3 = torch.nn.Linear(16, 2)
 
     def forward(self, x, edge_index, batch):
         x = F.relu(self.conv1(x, edge_index))
         x, edge_index, _, batch, _, _ = self.pool1(x, edge_index, None, batch)
         x1 = torch.cat([global_mean_pool(x, batch), global_max_pool(x, batch)], dim=1)
-        x = F.relu(self.conv2(x, edge_index))
+        x = F.relu(self.conv2(x, edge_index))nhi
         x, edge_index, _, batch, _, _ = self.pool2(x, edge_index, None, batch)
         x2 = torch.cat([global_mean_pool(x, batch), global_max_pool(x, batch)], dim=1)
         x = x1 + x2
