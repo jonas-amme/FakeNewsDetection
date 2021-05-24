@@ -40,7 +40,7 @@ def normalize(value, mu, sigma):
         return (value - mu) / sigma
 
 
-def normalizeCascade(cascade, Means, Sigmas):
+def normalizeCascade(cascade, Means, Sigmas, as_baseline):
 
     # change label type to Long
     y = cascade.y.to(torch.long)
@@ -70,7 +70,9 @@ def normalizeCascade(cascade, Means, Sigmas):
         # normalized_nodefeatures.append(normalize(feature[12], Means['favorite_count'], Sigmas['favorite_count']))
         normalized_nodefeatures.append(normalize(feature[13], Means['text'], Sigmas['text']))
         normalized_nodefeatures.append(normalize(feature[14], Means['hashtag'], Sigmas['hashtag']))
-        normalized_nodefeatures.append(normalize(feature[15], Means['is_value'], Sigmas['is_value']))
+
+        if not as_baseline:
+            normalized_nodefeatures.append(normalize(feature[15], Means['is_value'], Sigmas['is_value']))
 
         # add to new feature matrix
         x.append(normalized_nodefeatures)
@@ -194,9 +196,9 @@ def normalizeFeatures(data, as_baseline=False):
     for cascade in tqdm(data):
         if as_baseline:
             cascade = change_to_baseline(cascade)
-            final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas))
+            final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas, as_baseline))
         else:
-            final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas))
+            final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas, as_baseline))
 
     print()
     print('====== Example of standardized cascade ======')
