@@ -147,7 +147,9 @@ def normalizeFeatures(data, as_baseline=False):
     # Means['favorite_count'] = np.mean(favorite_count)
     Means['text'] = np.mean(text)
     Means['hashtag'] = np.mean(hashtag)
-    Means['is_value'] = np.mean(is_value)
+
+    if not as_baseline:
+        Means['is_value'] = np.mean(is_value)
 
     print()
     print('====== Mean values of node features ======')
@@ -172,7 +174,9 @@ def normalizeFeatures(data, as_baseline=False):
     # Sigmas['favorite_count'] = np.std(favorite_count)
     Sigmas['text'] = np.std(text)
     Sigmas['hashtag'] = np.std(hashtag)
-    Sigmas['is_value'] = np.std(is_value)
+
+    if not as_baseline:
+        Sigmas['is_value'] = np.std(is_value)
 
     print()
     print('====== Standard deviations of node features ======')
