@@ -213,5 +213,7 @@ def normalizeFeatures(data, as_baseline=False):
     return final_graph_dataset
 
 
+if __name__ == '__main__':
+    pass
 
 
