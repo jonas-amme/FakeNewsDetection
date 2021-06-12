@@ -28,7 +28,7 @@ class LoadData:
         for file in tqdm(self.files):
             filename = os.path.join(self.data_folder, file)
             data_obj = torch.load(filename)
-            if len(data_obj.x) == 0:
+            if len(data_obj.x) == 0: # remove empty cascades
                 continue
             if data_obj.y == 1: # TODO: remove constraints to load full data
                 # if real == 1000:
