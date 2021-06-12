@@ -23,7 +23,7 @@ parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
 parser.add_argument('--nhid', type=int, default=32, help='hidden size')
 parser.add_argument('--num_features', type=int, default=15, help='number of features (14 for baseline)')
-parser.add_argument('--epochs', type=int, default=100, help='maximum number of epochs')
+parser.add_argument('--epochs', type=int, default=300, help='maximum number of epochs')
 
 args = parser.parse_args()
 torch.manual_seed(args.seed)
@@ -127,68 +127,68 @@ if __name__ == '__main__':
         m3 = Net3(name='kGNN_TopK', nhid=args.nhid, num_features=args.num_features)
         models = [m1, m2, m3]
 
-    # model training
-    for model in models:
-        print(f'============= model: {model.name}, fold: {str(k)}=============')
+        # model training
+        for model in models:
+            print(f'============= model: {model.name}, fold: {str(k)}=============')
 
-        # to GPU
-        model.to(args.device)
+            # to GPU
+            model.to(args.device)
 
-        # initialize optimizer
-        optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            # initialize optimizer
+            optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-        out_log = list()
-        loss_train_list = list()
-        loss_val_list = list()
-        acc_train_list = list()
-        acc_val_list = list()
+            out_log = list()
+            loss_train_list = list()
+            loss_val_list = list()
+            acc_train_list = list()
+            acc_val_list = list()
 
-        t = time.time()
-        model.train()
-        for epoch in tqdm(range(args.epochs)):
-            loss_train = 0.0
-            correct = 0
-            for i, data in enumerate(train_loader):
-                optimizer.zero_grad()
-                data = data.to(args.device)
-                out = model(data.x, data.edge_index, data.batch)
-                y = data.y
-                loss = F.nll_loss(out, y)
-                loss.backward()
-                optimizer.step()
-                loss_train += loss.item()
-                out_log.append([F.softmax(out, dim=1), y])
+            t = time.time()
+            model.train()
+            for epoch in tqdm(range(args.epochs)):
+                loss_train = 0.0
+                correct = 0
+                for i, data in enumerate(train_loader):
+                    optimizer.zero_grad()
+                    data = data.to(args.device)
+                    out = model(data.x, data.edge_index, data.batch)
+                    y = data.y
+                    loss = F.nll_loss(out, y)
+                    loss.backward()
+                    optimizer.step()
+                    loss_train += loss.item()
+                    out_log.append([F.softmax(out, dim=1), y])
 
-            # model validation
-            _, _, acc_train, _, _, recall_train = eval(out_log)
-            [_, _, acc_val, f1_macro, precision, recall_val], loss_val = compute_test(val_loader)
+                # model validation
+                _, _, acc_train, _, _, recall_train = eval(out_log)
+                [_, _, acc_val, f1_macro, precision, recall_val], loss_val = compute_test(val_loader)
 
-            loss_train_list.append(loss_train)
-            loss_val_list.append(loss_val)
-            acc_train_list.append(acc_train)
-            acc_val_list.append(acc_val)
+                loss_train_list.append(loss_train)
+                loss_val_list.append(loss_val)
+                acc_train_list.append(acc_train)
+                acc_val_list.append(acc_val)
 
-            print(f'loss_train: {loss_train:.4f}, acc_train: {acc_train:.4f},'
-                  f' recall_train: {recall_train:.4f}, loss_val: {loss_val:.4f},'
-                  f' acc_val: {acc_val:.4f}, recall_val: {recall_val:.4f}')
+                print(f'loss_train: {loss_train:.4f}, acc_train: {acc_train:.4f},'
+                      f' recall_train: {recall_train:.4f}, loss_val: {loss_val:.4f},'
+                      f' acc_val: {acc_val:.4f}, recall_val: {recall_val:.4f}')
 
-        # create model dictionary
-        model_dict = {
-            'name': model.name,
-            'fold': k,
-            'epochs': args.epochs,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss_train': loss_train_list,
-            'loss_val': loss_val_list,
-            'acc_train': acc_train_list,
-            'acc_val': acc_val_list
-        }
+            # create model dictionary
+            model_dict = {
+                'name': model.name,
+                'fold': k,
+                'epochs': args.epochs,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss_train': loss_train_list,
+                'loss_val': loss_val_list,
+                'acc_train': acc_train_list,
+                'acc_val': acc_val_list
+            }
 
-        # save trained model
-        torch.save(model_dict, args.model_path + args.save_name + model.name + '_fold' + str(k) + '.pt')
+            # save trained model
+            torch.save(model_dict, args.model_path + args.save_name + model.name + '_fold' + str(k) + '.pt')
 
-        # model test
-        [_, _, acc, f1_macro, precision, recall], test_loss = compute_test(test_loader)
-        print(f'Test set results: acc: {acc:.4f}, f1_macro: {f1_macro:.4f}, '
-              f'precision: {precision:.4f}, recall: {recall:.4f}')
+            # model test
+            [_, _, acc, f1_macro, precision, recall], test_loss = compute_test(test_loader)
+            print(f'Test set results: acc: {acc:.4f}, f1_macro: {f1_macro:.4f}, '
+                  f'precision: {precision:.4f}, recall: {recall:.4f}')
