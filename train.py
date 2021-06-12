@@ -2,6 +2,7 @@ import time
 import argparse
 import random
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score
+from torch_geometric.data import DataLoader
 
 from LoadData import *
 from preprocess import *
