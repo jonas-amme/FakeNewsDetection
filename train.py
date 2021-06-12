@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
         # model training
         for model in models:
-            print(f'============= model: {model.name}, fold: {str(k)}=============')
+            print(f'============= model: {model.name}, fold: {str(k)} =============')
 
             # to GPU
             model.to(args.device)
