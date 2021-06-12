@@ -2,13 +2,13 @@
 import time
 from tqdm import tqdm
 import argparse
+import random
 
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear
-from torch_geometric.nn import GATConv, GCNConv, GraphConv, TopKPooling
+from torch_geometric.nn import GCNConv, GraphConv, TopKPooling
 from torch_geometric.nn import global_mean_pool, global_max_pool
-from torch.utils.data import random_split
 from torch_geometric.data import DataLoader
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, roc_auc_score
 
@@ -26,10 +26,10 @@ parser.add_argument('--data_path', type=str, default='/data/s2583550/FakeNewsDet
 parser.add_argument('--model_path', type=str, default='/data/s2583550/FakeNewsDetection/model/', help='enter your model path')
 parser.add_argument('--save_name', type=str, default='default', help='enter save name for model state dict')
 parser.add_argument('--as_baseline', type=bool, default=False, help='use IS cascades or baseline cascades')
-parser.add_argument('--batch_size', type=int, default=32, help='batch size')
+parser.add_argument('--batch_size', type=int, default=16, help='batch size')
 parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.01, help='weight decay')
-parser.add_argument('--nhid', type=int, default=64, help='hidden size')
+parser.add_argument('--nhid', type=int, default=32, help='hidden size')
 parser.add_argument('--num_features', type=int, default=15, help='number of features (14 for baseline)')
 parser.add_argument('--epochs', type=int, default=100, help='maximum number of epochs')
 
@@ -42,36 +42,16 @@ if torch.cuda.is_available():
 print(args)
 
 
-# Load Data
-dataloader = LoadData(args.data_path)  # args.data_path = data path of twitter data, to be specified in beginning
-graph_data = dataloader.graph_data
-
-# preprocess graph data
-graph_data = normalizeFeatures(graph_data, as_baseline=args.as_baseline)
-
-# create train, val test split
-num_training = int(len(graph_data) * 0.7)
-num_val = int(len(graph_data) * 0.1)
-num_test = len(graph_data) - (num_training + num_val)
-training_set, validation_set, test_set = random_split(graph_data, [num_training, num_val, num_test],
-                                                      generator=torch.Generator().manual_seed(42))
-
-# create dataloader objects
-train_loader = DataLoader(training_set, batch_size=args.batch_size, shuffle=True)
-val_loader = DataLoader(validation_set, batch_size=args.batch_size, shuffle=False)
-test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=False)
-
-
 # create models
 
 # GCN
 class Net1(torch.nn.Module):
-    def __init__(self, name):
+    def __init__(self, name, nhid, num_features):
         super(Net1, self).__init__()
 
         self.name = name
-        self.num_features = args.num_features
-        self.nhid = args.nhid
+        self.num_features = num_features
+        self.nhid = nhid
 
         self.conv1 = GCNConv(self.num_features, self.nhid)
         self.conv2 = GCNConv(self.nhid, self.nhid)
@@ -90,12 +70,12 @@ class Net1(torch.nn.Module):
 
 # kGNN
 class Net2(torch.nn.Module):
-    def __init__(self, name):
+    def __init__(self, name, nhid, num_features):
         super(Net2, self).__init__()
 
         self.name = name
-        self.num_features = args.num_features
-        self.nhid = args.nhid
+        self.num_features = num_features
+        self.nhid = nhid
 
         self.conv1 = GraphConv(self.num_features, self.nhid)
         self.conv2 = GraphConv(self.nhid, self.nhid)
@@ -114,12 +94,12 @@ class Net2(torch.nn.Module):
 
 # kGNN + TopKPooling
 class Net3(torch.nn.Module):
-    def __init__(self, name):
+    def __init__(self, name, nhid, num_features):
         super(Net3, self).__init__()
 
         self.name = name
-        self.num_features = args.num_features
-        self.nhid = args.nhid
+        self.num_features = num_features
+        self.nhid = nhid
 
         self.conv1 = GraphConv(self.num_features, self.nhid)
         self.pool1 = TopKPooling(self.nhid, ratio=0.8)
@@ -144,29 +124,6 @@ class Net3(torch.nn.Module):
         x = F.log_softmax(self.lin3(x), dim=-1)
         return x
 
-# GAT
-class Net4(torch.nn.Module):
-    def __init__(self, name):
-        super(Net4, self).__init__()
-
-        self.name = name
-        self.num_features = args.num_features
-        self.nhid = args.nhid
-
-        self.conv1 = GATConv(self.num_features, self.nhid)
-        self.conv2 = GATConv(self.nhid, self.nhid)
-
-        self.fc1 = Linear(self.nhid, self.nhid)
-        self.fc2 = Linear(self.nhid, 2)
-
-    def forward(self, x, edge_index, batch):
-        x = F.selu(self.conv1(x, edge_index))
-        x = F.selu(self.conv2(x, edge_index))
-        x = F.selu(global_mean_pool(x, batch))
-        x = F.selu(self.fc1(x))
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.fc2(x)
-        return F.log_softmax(x, dim=-1)
 
 
 def eval(log):
@@ -201,21 +158,69 @@ def compute_test(loader):
     return eval(out_log), loss_test
 
 
-# create models
-m1 = Net1(name='GCN')
-m2 = Net2(name='kGNN')
-m3 = Net3(name='kGNN_TopK')
-m4 = Net4(name='GAT')
-models = [m1, m2, m3, m4]
+# load data
+dataloader = LoadData(args.data_path)  # args.data_path = data path of twitter data, to be specified in beginning
+graph_data = dataloader.graph_data
+
+# preprocess graph data
+graph_data = normalizeFeatures(graph_data, as_baseline=args.as_baseline)
+
+# randomly shuffle graph data
+random.seed(42)
+random.shuffle(graph_data)
+
+# create train/test split
+ntrain = int(len(graph_data) * 0.8)
+train_set = graph_data[:ntrain]
+test_set = graph_data[ntrain:]
+
+# initialize cross-validation
+K = 5
+folds = list()
+fold_size = round(ntrain / K)
+i = 0
+start = 0
+end = fold_size
+while i < K:
+    folds.append(train_set[start:end])
+    start += fold_size
+    end += fold_size
+    i += 1
+
+# create test dataloader object
+test_loader = DataLoader(test_set, batch_size=args.batch_size, shuffle=True)
 
 
 print('Start training ... \n')
 
 if __name__ == '__main__':
 
+    # start cross-validation
+    for k in range(K):
+
+        # create train and validation folds
+        train_folds = list()
+        val_fold = list()
+
+        for j in range(K):
+            if j == k:
+                val_fold = folds[j]
+            else:
+                train_folds.extend(folds[j])
+
+        # create dataloader objects
+        train_loader = DataLoader(train_folds, batch_size=args.batch_size, shuffle=True)
+        val_loader = DataLoader(val_fold, batch_size=args.batch_size, shuffle=True)
+
+        # create models
+        m1 = Net1(name='GCN', nhid=args.nhid, num_features=args.num_features)
+        m2 = Net2(name='kGNN', nhid=args.nhid, num_features=args.num_features)
+        m3 = Net3(name='kGNN_TopK', nhid=args.nhid, num_features=args.num_features)
+        models = [m1, m2, m3]
+
     # model training
     for model in models:
-        print(f'============= {model.name} =============')
+        print(f'============= model: {model.name}, fold: {str(k)}=============')
 
         # to GPU
         model.to(args.device)
@@ -261,6 +266,7 @@ if __name__ == '__main__':
         # create model dictionary
         model_dict = {
             'name': model.name,
+            'fold': k,
             'epochs': args.epochs,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
@@ -271,7 +277,7 @@ if __name__ == '__main__':
         }
 
         # save trained model
-        torch.save(model_dict, args.model_path + args.save_name + model.name + '.pt')
+        torch.save(model_dict, args.model_path + args.save_name + model.name + '_fold' + str(k) + '.pt')
 
         # model test
         [_, _, acc, f1_macro, precision, recall], test_loss = compute_test(test_loader)
