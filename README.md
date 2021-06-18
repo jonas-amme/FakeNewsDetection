@@ -18,3 +18,5 @@ where ```${CUDA}``` and ```${TORCH}``` should be replaced by your specific CUDA 
 
 To create the word embeddings it is required to create a subdir in ``CreateData`` called ``resources``, in this folder you need to place the ``glove.twitter.27B.200d.txt`` file.
 You can download the file here: https://ndownloader.figshare.com/files/21119193 (original link seems to be broken: https://nlp.stanford.edu/projects/glove/)
+
+To create the dataset run the createCascade.py file
