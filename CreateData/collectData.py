@@ -9,16 +9,18 @@ class RetrieveData:
         self.original_tweet_object = original_tweet_object
         self.retweets = retweets_object["retweets"]
         for retweet in self.retweets:
-            user_timeline = self.read_user_timeline(retweet["user"]["id"])
+            user_timeline = self.read_user_timeline(retweet["user"]["id"], retweet["created_at"], retweet["user"]["screen_name"])
             if user_timeline is not None:
                 self.user_timelines[retweet["user"]["id"]] = user_timeline
 
         self.percentage_obtained = len(self.user_timelines)/len(retweets_object["retweets"]) * 100
 
-    def read_user_timeline(self, user):
+    def read_user_timeline(self, user, created_at, *tmp):
         user_timeline_filepath = os.path.join(self.user_timeline_folder, f"{user}.json")
         if os.path.exists(user_timeline_filepath):
             return json.load(open(user_timeline_filepath, "rb"))
+        else:
+            print(f'no data found on user {user} -> {tmp[0]} who retweeted at {created_at} ')
         return None
 
     def get_retweet_matrix(self, users):
