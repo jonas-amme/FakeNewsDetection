@@ -2,20 +2,37 @@ import os
 import json
 import numpy as np
 import time
+import argparse
 from tqdm import tqdm
 
-# libs for creating the torch based network
 import torch
 from torch_geometric.data import Data
 
 
+# initialize arguments
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--dataset', type=str, default='/data/s1805819/fakenewsnet_dataset/politifact',
+                    help='enter your Twitter data path')
+
+parser.add_argument('--glove', type=str,  default='/data/s2583550/FakeNewsDetection/CreateData/resources/glove.twitter.27B.200d.txt',
+                    help='enter your GloVe data path')
+
+parser.add_argument('--target_folder', type=str, default='/data/s2583550/FakeNewsDetection',
+                    help='enter your target data path')
+
+args = parser.parse_args()
+print(args)
+
+
 class GloVe:
-    def __init__(self, debug=True):
+    def __init__(self, debug=False):
         print(f"setting up GloVe dict")
         self.embeddings_dict = {}
 
         if not debug:
-            filename = os.path.join("resources", "glove.twitter.27B.200d.txt")
+            # args.glove = data path of GloVe data, to be entered in the beginning
+            filename = args.glove
             with open(filename, "r", encoding="utf-8") as f:
                 for line in f:
                     values = line.split()
@@ -168,7 +185,7 @@ class CreateCascade:
             x=x_tensor, edge_index=edge_index_tensor.t().contiguous(), y=y_tensor
         )
 
-        print(data)
+        # print(data)
         # finish iteration
         self.i += 1
         return data, self.cascade_ids[self.i - 1]
@@ -177,15 +194,16 @@ class CreateCascade:
 if __name__ == "__main__":
     print(f"started the creation of novel cascades")
 
+
     def _get_news_ids(data_folder):
         folders = os.listdir(data_folder)
         return folders
 
     # When Debug=True GloVe always returns 0 :)
     glove = GloVe(debug=False)
-    # TODO: this should be changed to where you have the data, if you run it in a liacs DS machine you can use
-    # root = os.path.join("data", "s1805819", "fakenewsnet_dataset", "politifact")
-    root = os.path.join("D:", "Onderzoek", "FakeNews", "fakenewsnet_dataset", "politifact")
+    # args.dataset = data path of twitter data, to be entered in the beginning
+    root = args.dataset
+    # root = os.path.join("D:", "Onderzoek", "FakeNews", "fakenewsnet_dataset", "politifact")
 
     for is_true in [False, True]:
         label = "real" if is_true else "fake"
@@ -196,6 +214,7 @@ if __name__ == "__main__":
                 if cascade is not None:
                     # print(f"\t\t{cascade[0]}")
                     filename = os.path.join(
-                        "cascades", f'{news_id}-{cascade[1].split(".")[0]}.pt'
+                        # args.target_folder = target folder of news cascades, to be entered in the beginning
+                        args.target_folder, "cascades", f'{news_id}-{cascade[1].split(".")[0]}.pt'
                     )
                     torch.save(cascade[0], filename)

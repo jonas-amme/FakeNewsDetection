@@ -1,125 +1,219 @@
-import numpy as np
-import datetime
+"""
+Functions for preprocessing the twitter data.
+"""
 
+import numpy as np
+from tqdm import tqdm
 import torch
-from torch_geometric.data import Data, DataLoader
-from LoadData import LoadData
+from torch_geometric.data import Data
 
 
 # list of features
-# 0 tweet created at           # currently removed but will need for time between tweets as edge features
-# 1 tweet txt embedding
-# 2 tweet hashtags embedding
-# 3 user name embedding
-# 4 user description embedding
-# 5 user followers count
-# 6 user following count
-# 7 user listed count
-# 8 user created at            # will be removed
-# 9 AgeUntilTweet in seconds   # will be added
-# 10 time between tweets       # will be added still need to code !!!!
+# 0 location
+# 1 language -> almost always None
+# 2 profile description
+# 3 account creation
+# 4 verified
+# 5 favorites count
+# 6 listed count
+# 7 status count
+# 8 followers count
+# 9 friends count
+# 10 retweet time
+# 11 source device
+# 12 retweet count
+# 13 favorites count
+# 14 text
+# 15 hashtags
+# 16 interaction strength
 
 
-def addAgeUntilTweet(cascade):
-
-    x = list()
-    edge_index = cascade.edge_index
-    y = cascade.y
-
-    datetimeFormat = '%Y%m%d%H%M%S'
-
-    for i, row in enumerate(cascade.x):
-        features = row.numpy()  # extract features of each node
-        date_tweet = str(features[0])  # extract tweet creation date
-        date_created = str(features[-1])  # extract user creation date
-        diff = datetime.datetime.strptime(date_tweet, datetimeFormat) \
-               - datetime.datetime.strptime(date_created, datetimeFormat)  # compute time difference
-        diff_sec = np.array(diff.days, ndmin=1)
-        features = np.delete(features, [0,1,2,3,4,-1])  # remove tweet and user creation date
-        x.append(np.concatenate((features, diff_sec)))  # concat and append to new feature list
-
-    x = torch.tensor(x, dtype=torch.float)  # convert new feature list to torch tensor
-    cascade = Data(x=x, edge_index=edge_index, y=y)  # create new cascade representation
-    return cascade
+def change_to_baseline(cascade):
+    N = len(cascade.x) - 1   # root id and no. edges
+    origin = np.repeat(N, N)
+    destination = np.arange(N)
+    indices = torch.tensor(np.array((origin, destination)), dtype=torch.long)
+    return Data(x=cascade.x, edge_index=indices, y=cascade.y)
 
 
 def normalize(value, mu, sigma):
-    if sigma == 0.0:
-        return 0.0
-    return (value - mu) / sigma
+        return (value - mu) / sigma
 
 
-def normalizeCascade(cascade, MeansSigmas):
+def normalizeCascade(cascade, Means, Sigmas, as_baseline):
 
-    x = list()
-    edge_index = cascade.edge_index
+    # change label type to Long
     y = cascade.y.to(torch.long)
 
-    for node in cascade.x:  # loop over each node in the cascade
+    # initialize new feature matrix
+    x = list()
+
+    # normalize node features
+    for feature in cascade.x:  # loop over each node in the cascade
 
         # initialize new feature vector
-        normalized = list()
+        normalized_nodefeatures = list()
 
         # normalize each feature with its corresponding mean and sigma
-        # normalized.append(normalize(node[0], MeansSigmas['TextEmb'][0], MeansSigmas['TextEmb'][1]))
-        # normalized.append(normalize(node[1], MeansSigmas['HashEmb'][0], MeansSigmas['HashEmb'][1]))
-        # normalized.append(normalize(node[2], MeansSigmas['NameEmb'][0], MeansSigmas['NameEmb'][1]))
-        # normalized.append(normalize(node[3], MeansSigmas['DescEmb'][0], MeansSigmas['DescEmb'][1]))
-        normalized.append(normalize(node[0], MeansSigmas['Followers'][0], MeansSigmas['Followers'][1]))
-        normalized.append(normalize(node[1], MeansSigmas['Following'][0], MeansSigmas['Following'][1]))
-        normalized.append(normalize(node[2], MeansSigmas['Listed'][0], MeansSigmas['Listed'][1]))
-        normalized.append(normalize(node[3], MeansSigmas['Age'][0], MeansSigmas['Age'][1]))
+        normalized_nodefeatures.append(normalize(feature[0], Means['location'], Sigmas['location']))
+        normalized_nodefeatures.append(normalize(feature[1], Means['description'], Sigmas['description']))
+        normalized_nodefeatures.append(normalize(feature[2], Means['account_created_at'], Sigmas['account_created_at']))
+        normalized_nodefeatures.append(normalize(feature[3], Means['verified'], Sigmas['verified']))
+        normalized_nodefeatures.append(normalize(feature[4], Means['favorites_count'], Sigmas['favorites_count']))
+        normalized_nodefeatures.append(normalize(feature[5], Means['listed_count'], Sigmas['listed_count']))
+        normalized_nodefeatures.append(normalize(feature[6], Means['statuses_count'], Sigmas['statuses_count']))
+        normalized_nodefeatures.append(normalize(feature[7], Means['followers_count'], Sigmas['followers_count']))
+        normalized_nodefeatures.append(normalize(feature[8], Means['friends_count'], Sigmas['friends_count']))
+        normalized_nodefeatures.append(normalize(feature[9], Means['tweet_created_at'], Sigmas['tweet_created_at']))
+        normalized_nodefeatures.append(normalize(feature[10], Means['source'], Sigmas['source']))
+        normalized_nodefeatures.append(normalize(feature[11], Means['retweet_count'], Sigmas['retweet_count']))
+        # normalized_nodefeatures.append(normalize(feature[12], Means['favorite_count'], Sigmas['favorite_count']))
+        normalized_nodefeatures.append(normalize(feature[13], Means['text'], Sigmas['text']))
+        normalized_nodefeatures.append(normalize(feature[14], Means['hashtag'], Sigmas['hashtag']))
 
-        # add normalized vector to new feature representation
-        x.append(normalized)
+        if not as_baseline:
+            normalized_nodefeatures.append(normalize(feature[15], Means['is_value'], Sigmas['is_value']))
 
-    x = torch.tensor(x, dtype=torch.float)  # convert new feature list to torch tensor
-    cascade = Data(x=x, edge_index=edge_index, y=y)  # create new cascade representation
-    return cascade
+        # add to new feature matrix
+        x.append(normalized_nodefeatures)
+
+    # convert new feature matrix to torch tensor
+    x = torch.tensor(np.array(x), dtype=torch.float)
+
+    # return new cascade representation 
+    return Data(x=x, edge_index=cascade.edge_index, y=y)
 
 
-def normalizeNodeFeatures(data):
+def normalizeFeatures(data, as_baseline=False):
 
-    # initialize total feature list
-    # TextEmb = list()
-    # HashEmb = list()
-    # NameEmb = list()
-    # DescEmb = list()
-    Followers = list()
-    Following = list()
-    Listed = list()
-    Age = list()
+    # initialize lists of all features
+    location = list()
+    description = list()
+    account_created_at = list()
+    verified = list()
+    favorites_count = list()
+    listed_count = list()
+    statuses_count = list()
+    followers_count = list()
+    friends_count = list()
+    tweet_created_at = list()
+    source = list()
+    retweet_count = list()
+    # favorite_count = list()
+    text = list()
+    hashtag = list()
+    is_value = list()
 
-    # initialize new graph dataset
-    graph_dataset = list()
-    for cascade in data:  # loop over each cascade in data
-        graph_dataset.append(addAgeUntilTweet(cascade))  # create age until tweet and add to new graph data
 
-    # loop over new graph data
-    for cascade in graph_dataset:
-        # TextEmb.extend([features[0] for features in cascade.x])  # extract text embedding
-        # HashEmb.extend([features[1] for features in cascade.x])  # extract hashtag embedding
-        # NameEmb.extend([features[2] for features in cascade.x])  # extract name embedding
-        # DescEmb.extend([features[3] for features in cascade.x])  # extract description embedding
-        Followers.extend([features[0] for features in cascade.x])  # extract follower count
-        Following.extend([features[1] for features in cascade.x])  # extract following count
-        Listed.extend([features[2] for features in cascade.x])  # extract listed count
-        Age.extend([features[3] for features in cascade.x])  # extract age until tweet
+    # initialize total feature dict
+    all_features = dict()
 
-    # calculate means and standard deviations
-    MeansSigmas = dict()
-    # MeansSigmas['TextEmb'] = (np.mean(TextEmb), np.std(TextEmb))
-    # MeansSigmas['HashEmb'] = (np.mean(HashEmb), np.std(HashEmb))
-    # MeansSigmas['NameEmb'] = (np.mean(NameEmb), np.std(NameEmb))
-    # MeansSigmas['DescEmb'] = (np.mean(DescEmb), np.std(DescEmb))
-    MeansSigmas['Followers'] = (np.mean(Followers), np.std(Followers))
-    MeansSigmas['Following'] = (np.mean(Following), np.std(Following))
-    MeansSigmas['Listed'] = (np.mean(Listed), np.std(Listed))
-    MeansSigmas['Age'] = (np.mean(Listed), np.std(Listed))
+    print()
+    print('====== Start extracting node features ======')
+    for cascade in tqdm(data):  # loop over each cascade in data
+        for feature in cascade.x:  # extract features of all nodes
+            location.extend([feature[0]])
+            description.extend([feature[1]])
+            account_created_at.extend([feature[2]])
+            verified.extend([feature[3]])
+            favorites_count.extend([feature[4]])
+            listed_count.extend([feature[5]])
+            statuses_count.extend([feature[6]])
+            followers_count.extend([feature[7]])
+            friends_count.extend([feature[8]])
+            tweet_created_at.extend([feature[9]])
+            source.extend([feature[10]])
+            retweet_count.extend([feature[11]])
+            # favorite_count.extend([feature[12]])
+            text.extend([feature[13]])
+            hashtag.extend([feature[14]])
+
+            if not as_baseline:
+                is_value.extend([feature[15]])
+
+
+    # store all means
+    Means = dict()
+    Means['location'] = np.mean(location)
+    Means['description'] = np.mean(description)
+    Means['account_created_at'] = np.mean(account_created_at)
+    Means['verified'] = np.mean(verified)
+    Means['favorites_count'] = np.mean(favorites_count)
+    Means['listed_count'] = np.mean(listed_count)
+    Means['statuses_count'] = np.mean(statuses_count)
+    Means['followers_count'] = np.mean(followers_count)
+    Means['friends_count'] = np.mean(friends_count)
+    Means['tweet_created_at'] = np.mean(tweet_created_at)
+    Means['source'] = np.mean(source)
+    Means['retweet_count'] = np.mean(retweet_count)
+    # Means['favorite_count'] = np.mean(favorite_count)
+    Means['text'] = np.mean(text)
+    Means['hashtag'] = np.mean(hashtag)
+
+    if not as_baseline:
+        Means['is_value'] = np.mean(is_value)
+
+    print()
+    print('====== Mean values of node features ======')
+    for k,v in Means.items():
+        print(k, v)
+    print()
+
+    # store all standard deviations
+    Sigmas = dict()
+    Sigmas['location'] = np.std(location)
+    Sigmas['description'] = np.std(description)
+    Sigmas['account_created_at'] = np.std(account_created_at)
+    Sigmas['verified'] = np.std(verified)
+    Sigmas['favorites_count'] = np.std(favorites_count)
+    Sigmas['listed_count'] = np.std(listed_count)
+    Sigmas['statuses_count'] = np.std(statuses_count)
+    Sigmas['followers_count'] = np.std(followers_count)
+    Sigmas['friends_count'] = np.std(friends_count)
+    Sigmas['tweet_created_at'] = np.std(tweet_created_at)
+    Sigmas['source'] = np.std(source)
+    Sigmas['retweet_count'] = np.std(retweet_count)
+    # Sigmas['favorite_count'] = np.std(favorite_count)
+    Sigmas['text'] = np.std(text)
+    Sigmas['hashtag'] = np.std(hashtag)
+
+    if not as_baseline:
+        Sigmas['is_value'] = np.std(is_value)
+
+    print()
+    print('====== Standard deviations of node features ======')
+    for k,v in Sigmas.items():
+        print(k, v)
+    print()
+
+
+    print()
+    print('====== Start normalizing node features ======')
+    print()
 
     # normalize each cascade and add to new dataset
     final_graph_dataset = list()
-    for cascade in graph_dataset:
-        final_graph_dataset.append(normalizeCascade(cascade, MeansSigmas))
+    for cascade in tqdm(data):
+        if as_baseline:
+            cascade = change_to_baseline(cascade)
+            final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas, as_baseline))
+        else:
+            final_graph_dataset.append(normalizeCascade(cascade, Means, Sigmas, as_baseline))
+
+    print()
+    print('====== Example of standardized cascade ======')
+    example = final_graph_dataset[0]
+    print('Cascade object: ', example)
+    print('Edge indices:', example.edge_index)
+    print('Feature matrix: ', example.x)
+    print('Edge features: ', example.edge_attr)
+    print('Label: ', example.y)
+    print()
 
     return final_graph_dataset
+
+
+if __name__ == '__main__':
+    pass
+
+
